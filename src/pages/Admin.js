@@ -4,18 +4,30 @@ import {
   getPlayers, addPlayer, updatePlayer, deletePlayer,
   getSettings, saveSettings, getLiveMatch,
 } from '../data/store';
+import {
+  getAllTournaments, getTournamentsByStatus, getTournamentIndex,
+  createTournament, updateTournament, deleteTournament,
+  goLive, markComplete, revertStatus, validateTournament,
+  createBlankTournament,
+} from '../data/tournamentStore';
 
 const ROLES = ['IGL', 'Sniper', 'Assaulter', 'Support', 'Entry Fragger'];
 const STATUSES = ['LIVE', 'UPCOMING', 'FINISHED'];
+const TIER_OPTIONS = ['S', 'A', 'B', 'C', 'D', 'Community'];
+const GAME_MODE_OPTIONS = ['BR', 'CS'];
+const TOURNAMENT_STATUS_OPTIONS = ['upcoming', 'live', 'completed'];
+const STAGE_TYPE_OPTIONS = ['br_points', 'cs_bracket', 'round_robin', 'swiss'];
+const CS_FORMAT_OPTIONS = ['Bo1', 'Bo3', 'Bo5'];
 
-function Input({ label, ...props }) {
+function Input({ label, error, ...props }) {
   return (
     <div>
       <label className="block text-grey text-sm mb-1">{label}</label>
       <input
-        className="w-full bg-dark border border-dark-border rounded-lg px-3 py-2 text-white focus:border-accent focus:outline-none transition"
+        className={`w-full bg-dark border rounded-lg px-3 py-2 text-white focus:border-accent focus:outline-none transition ${error ? 'border-loss' : 'border-dark-border'}`}
         {...props}
       />
+      {error && <p className="text-loss text-xs mt-1">{error}</p>}
     </div>
   );
 }
@@ -34,6 +46,26 @@ function Select({ label, options, ...props }) {
       </select>
     </div>
   );
+}
+
+// ─── Status badge helper ───
+function StatusBadge({ status }) {
+  const styles = {
+    upcoming: 'bg-upcoming-blue/20 text-upcoming-blue',
+    live: 'bg-green-500/20 text-green-400',
+    completed: 'bg-grey/20 text-grey',
+  };
+  return (
+    <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${styles[status] || styles.completed}`}>
+      {status}
+    </span>
+  );
+}
+
+// ─── Tier badge helper ───
+function TierBadge({ tier }) {
+  const colors = { S: 'text-yellow-400 bg-yellow-400/10', A: 'text-orange-400 bg-orange-400/10', B: 'text-blue-400 bg-blue-400/10', C: 'text-green-400 bg-green-400/10', D: 'text-grey bg-grey/10', Community: 'text-purple-400 bg-purple-400/10' };
+  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${colors[tier] || colors.D}`}>{tier}-Tier</span>;
 }
 
 // =================== MATCHES TAB ===================
@@ -273,7 +305,7 @@ function PlayersTab() {
   const [players, setPlayers] = useState(getPlayers());
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const blank = { name: '', game_name: '', role: 'IGL', bio: '', photo_url: '', is_active: true };
+  const blank = { name: '', game_name: '', role: 'IGL', bio: '', photo_url: '', is_active: true, total_kills: 0, matches_played: 0, best_rank: 0, win_rate: 0, avg_kills: 0, tournaments_played: 0, instagram: '', youtube: '', twitter: '' };
   const [form, setForm] = useState(blank);
 
   const refresh = () => setPlayers(getPlayers());
@@ -322,6 +354,25 @@ function PlayersTab() {
                 className="w-full bg-dark border border-dark-border rounded-lg px-3 py-2 text-white focus:border-accent focus:outline-none transition resize-none"
               />
             </div>
+            <div className="sm:col-span-2">
+              <hr className="border-dark-border my-2" />
+              <p className="text-grey text-sm uppercase tracking-wider mb-3">Player Stats</p>
+            </div>
+            <Input label="Total Kills" type="number" value={form.total_kills || 0} onChange={e => f('total_kills', +e.target.value)} />
+            <Input label="Matches Played" type="number" value={form.matches_played || 0} onChange={e => f('matches_played', +e.target.value)} />
+            <Input label="Best Rank" type="number" value={form.best_rank || 0} onChange={e => f('best_rank', +e.target.value)} />
+            <Input label="Win Rate %" type="number" value={form.win_rate || 0} onChange={e => f('win_rate', +e.target.value)} />
+            <Input label="Avg Kills Per Match" type="number" value={form.avg_kills || 0} onChange={e => {
+              f('avg_kills', +e.target.value);
+            }} />
+            <Input label="Tournaments Played" type="number" value={form.tournaments_played || 0} onChange={e => f('tournaments_played', +e.target.value)} />
+            <div className="sm:col-span-2">
+              <hr className="border-dark-border my-2" />
+              <p className="text-grey text-sm uppercase tracking-wider mb-3">Social Links</p>
+            </div>
+            <Input label="Instagram URL" value={form.instagram || ''} onChange={e => f('instagram', e.target.value)} placeholder="https://instagram.com/..." />
+            <Input label="YouTube URL" value={form.youtube || ''} onChange={e => f('youtube', e.target.value)} placeholder="https://youtube.com/..." />
+            <Input label="Twitter/X URL" value={form.twitter || ''} onChange={e => f('twitter', e.target.value)} placeholder="https://x.com/..." />
             <div className="flex items-center gap-3">
               <label className="text-grey text-sm">Active</label>
               <button
@@ -346,6 +397,8 @@ function PlayersTab() {
               <th className="py-2 px-3">Name</th>
               <th className="py-2 px-3">IGN</th>
               <th className="py-2 px-3">Role</th>
+              <th className="py-2 px-3">Kills</th>
+              <th className="py-2 px-3">Matches</th>
               <th className="py-2 px-3">Status</th>
               <th className="py-2 px-3">Actions</th>
             </tr>
@@ -356,6 +409,8 @@ function PlayersTab() {
                 <td className="py-3 px-3 font-semibold">{p.name}</td>
                 <td className="py-3 px-3 text-accent">{p.game_name}</td>
                 <td className="py-3 px-3 text-grey">{p.role}</td>
+                <td className="py-3 px-3 text-grey">{p.total_kills || 0}</td>
+                <td className="py-3 px-3 text-grey">{p.matches_played || 0}</td>
                 <td className="py-3 px-3">
                   <span className={`text-xs font-bold px-2 py-1 rounded ${p.is_active ? 'bg-win/20 text-win' : 'bg-loss/20 text-loss'}`}>
                     {p.is_active ? 'Active' : 'Inactive'}
@@ -412,19 +467,599 @@ function SettingsTab() {
   );
 }
 
+// =================== OVERVIEW TAB ===================
+function OverviewTab({ setTab }) {
+  const index = getTournamentIndex();
+  const counts = { upcoming: 0, live: 0, completed: 0 };
+  index.forEach(e => { if (counts[e.status] !== undefined) counts[e.status]++; });
+
+  const all = getAllTournaments().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 5);
+
+  return (
+    <div>
+      <h2 className="font-heading font-bold text-2xl text-white mb-6">Tournament Overview</h2>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        {[
+          { label: 'Upcoming', count: counts.upcoming, color: 'text-upcoming-blue', bg: 'bg-upcoming-blue/10 border-upcoming-blue/20', tab: 'upcoming' },
+          { label: 'Live', count: counts.live, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20', tab: 'live-tournaments' },
+          { label: 'Completed', count: counts.completed, color: 'text-grey', bg: 'bg-grey/10 border-grey/20', tab: 'completed' },
+        ].map(c => (
+          <button
+            key={c.label}
+            onClick={() => setTab(c.tab)}
+            className={`rounded-xl p-5 border text-left transition hover:scale-[1.02] ${c.bg}`}
+          >
+            <p className="text-grey text-xs uppercase tracking-wider mb-1">{c.label}</p>
+            <p className={`font-heading font-bold text-4xl ${c.color}`}>{c.count}</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Recent Tournaments */}
+      <div className="bg-dark border border-dark-border rounded-xl p-5">
+        <h3 className="font-heading font-bold text-sm text-grey uppercase tracking-wider mb-4">Recently Updated</h3>
+        {all.length === 0 ? (
+          <p className="text-grey text-sm">No tournaments found.</p>
+        ) : (
+          <div className="space-y-2">
+            {all.map(t => (
+              <div key={t.id} className="flex items-center justify-between px-4 py-3 rounded-lg bg-dark-card border border-dark-border/50 hover:border-accent/30 transition">
+                <div className="min-w-0">
+                  <p className="font-semibold text-white text-sm truncate">{t.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <TierBadge tier={t.tier} />
+                    <span className="text-[10px] text-grey">{t.gameMode}</span>
+                    <span className="text-[10px] text-grey">{t.region}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                  <StatusBadge status={t.status} />
+                  <span className="text-[10px] text-grey">{t.godlikeFinalPosition || '—'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =================== CREATE TOURNAMENT TAB ===================
+function CreateTournamentTab({ onCreated }) {
+  const blank = {
+    ...createBlankTournament(),
+    name: '', organizer: '', gameMode: 'BR', region: '', tier: 'C',
+    status: 'upcoming', startDate: '', endDate: '', prizePoolINR: 0, prizePoolUSD: 0,
+    teamsCount: 0, liquipediaURL: '', instagramURL: '', vodLinks: [],
+  };
+  const [form, setForm] = useState(blank);
+  const [errors, setErrors] = useState([]);
+  const [saved, setSaved] = useState(false);
+
+  const f = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const addVod = () => setForm(prev => ({ ...prev, vodLinks: [...prev.vodLinks, { stage: '', url: '' }] }));
+  const removeVod = (i) => setForm(prev => ({ ...prev, vodLinks: prev.vodLinks.filter((_, idx) => idx !== i) }));
+  const updateVod = (i, key, val) => setForm(prev => ({
+    ...prev,
+    vodLinks: prev.vodLinks.map((v, idx) => idx === i ? { ...v, [key]: val } : v),
+  }));
+
+  const handleSubmit = () => {
+    const validation = validateTournament(form);
+    if (!validation.valid) {
+      setErrors(validation.errors);
+      return;
+    }
+    setErrors([]);
+    createTournament(form);
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      setForm(blank);
+      if (onCreated) onCreated();
+    }, 1500);
+  };
+
+  return (
+    <div>
+      <h2 className="font-heading font-bold text-2xl text-white mb-6">Create Tournament</h2>
+
+      {errors.length > 0 && (
+        <div className="bg-loss/10 border border-loss/30 rounded-lg p-4 mb-6">
+          {errors.map((e, i) => <p key={i} className="text-loss text-sm">{e}</p>)}
+        </div>
+      )}
+
+      {saved && (
+        <div className="bg-win/10 border border-win/30 rounded-lg p-4 mb-6 animate-slide-up">
+          <p className="text-win text-sm font-semibold">Tournament created successfully!</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <Input label="Tournament Name *" value={form.name} onChange={e => f('name', e.target.value)} />
+        <Input label="Organizer *" value={form.organizer} onChange={e => f('organizer', e.target.value)} />
+        <Select label="Game Mode *" options={GAME_MODE_OPTIONS} value={form.gameMode} onChange={e => f('gameMode', e.target.value)} />
+        <Input label="Region *" value={form.region} onChange={e => f('region', e.target.value)} />
+        <Select label="Tier *" options={TIER_OPTIONS} value={form.tier} onChange={e => f('tier', e.target.value)} />
+        <Select label="Status *" options={TOURNAMENT_STATUS_OPTIONS} value={form.status} onChange={e => f('status', e.target.value)} />
+        <Input label="Start Date *" type="date" value={form.startDate} onChange={e => f('startDate', e.target.value)} />
+        <Input label="End Date *" type="date" value={form.endDate} onChange={e => f('endDate', e.target.value)} />
+        <Input label="Prize Pool (INR)" type="number" value={form.prizePoolINR} onChange={e => f('prizePoolINR', +e.target.value)} />
+        <Input label="Prize Pool (USD)" type="number" value={form.prizePoolUSD} onChange={e => f('prizePoolUSD', +e.target.value)} />
+        <Input label="Teams Count *" type="number" value={form.teamsCount} onChange={e => f('teamsCount', +e.target.value)} />
+        <Input label="Liquipedia URL" value={form.liquipediaURL} onChange={e => f('liquipediaURL', e.target.value)} placeholder="https://liquipedia.net/..." />
+        <Input label="Instagram Link" value={form.instagramURL} onChange={e => f('instagramURL', e.target.value)} placeholder="https://instagram.com/..." />
+      </div>
+
+      {/* VOD Links */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-grey text-sm uppercase tracking-wider">VOD Links</p>
+          <button onClick={addVod} className="px-3 py-1 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition">
+            + Add VOD Link
+          </button>
+        </div>
+        {form.vodLinks.map((v, i) => (
+          <div key={i} className="flex gap-2 mb-2 items-end">
+            <div className="flex-1">
+              <Input label="Stage" value={v.stage} onChange={e => updateVod(i, 'stage', e.target.value)} placeholder="e.g. Grand Finals" />
+            </div>
+            <div className="flex-[2]">
+              <Input label="URL" value={v.url} onChange={e => updateVod(i, 'url', e.target.value)} placeholder="https://youtube.com/..." />
+            </div>
+            <button onClick={() => removeVod(i)} className="px-2 py-2 text-xs bg-loss/20 text-loss hover:bg-loss/30 rounded transition mb-0.5">X</button>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={handleSubmit} className="w-full py-3 bg-accent hover:bg-accent-dark text-white rounded-lg font-heading font-bold text-lg transition">
+        {saved ? '✓ Created!' : 'Create Tournament'}
+      </button>
+    </div>
+  );
+}
+
+// =================== TOURNAMENT LIST (shared by Upcoming/Live/Completed tabs) ===================
+function TournamentListTab({ statusFilter, setTab }) {
+  const [tournaments, setTournaments] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [editErrors, setEditErrors] = useState([]);
+  const [editSaved, setEditSaved] = useState(false);
+
+  const refresh = () => setTournaments(getTournamentsByStatus(statusFilter));
+
+  useEffect(() => { refresh(); }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const labels = { upcoming: 'Upcoming', live: 'Live', completed: 'Completed' };
+
+  const handleDelete = (id) => {
+    if (!window.confirm('Delete this tournament? This cannot be undone.')) return;
+    deleteTournament(id);
+    refresh();
+  };
+
+  const handleGoLive = (id) => {
+    if (!window.confirm('Move this tournament to LIVE status?')) return;
+    goLive(id);
+    refresh();
+  };
+
+  const handleMarkComplete = (id) => {
+    if (!window.confirm('Mark this tournament as COMPLETED?')) return;
+    markComplete(id);
+    refresh();
+  };
+
+  const handleRevert = (id) => {
+    if (!window.confirm('Revert this tournament to previous status?')) return;
+    revertStatus(id);
+    refresh();
+  };
+
+  const openEdit = (t) => {
+    setEditingId(t.id);
+    setEditForm({ ...t });
+    setEditErrors([]);
+    setEditSaved(false);
+  };
+
+  const closeEdit = () => { setEditingId(null); setEditForm(null); setEditErrors([]); };
+
+  const ef = (key, val) => setEditForm(prev => ({ ...prev, [key]: val }));
+
+  // ─── Stage management helpers ───
+  const addStage = () => ef('stages', [...(editForm.stages || []), { name: '', type: 'br_points', dateRange: '', teamsInStage: 0, qualificationRule: '' }]);
+  const removeStage = (i) => ef('stages', (editForm.stages || []).filter((_, idx) => idx !== i));
+  const updateStage = (i, key, val) => ef('stages', (editForm.stages || []).map((s, idx) => idx === i ? { ...s, [key]: val } : s));
+
+  // ─── BR match helpers within a stage ───
+  const addBRMatch = (stageIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.matches = [...(stage.matches || []), { matchNum: (stage.matches || []).length + 1, placement: 0, kills: 0, playerKills: { YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 }, booyah: false }];
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const removeBRMatch = (stageIdx, matchIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.matches = (stage.matches || []).filter((_, i) => i !== matchIdx);
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const updateBRMatch = (stageIdx, matchIdx, key, val) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.matches = (stage.matches || []).map((m, i) => i === matchIdx ? { ...m, [key]: val } : m);
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const updatePlayerKill = (stageIdx, matchIdx, player, val) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.matches = (stage.matches || []).map((m, i) => {
+      if (i !== matchIdx) return m;
+      return { ...m, playerKills: { ...m.playerKills, [player]: val } };
+    });
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+
+  // ─── CS match helpers within a stage ───
+  const addCSMatch = (stageIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.csMatches = [...(stage.csMatches || []), { roundName: '', format: 'Bo3', opponent: '', games: [] }];
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const removeCSMatch = (stageIdx, matchIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.csMatches = (stage.csMatches || []).filter((_, i) => i !== matchIdx);
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const updateCSMatch = (stageIdx, matchIdx, key, val) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.csMatches = (stage.csMatches || []).map((m, i) => i === matchIdx ? { ...m, [key]: val } : m);
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const addCSGame = (stageIdx, matchIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    const maxGames = { Bo1: 1, Bo3: 3, Bo5: 5 }[stage.csMatches[matchIdx].format] || 5;
+    if ((stage.csMatches[matchIdx].games || []).length >= maxGames) return;
+    stage.csMatches = (stage.csMatches || []).map((m, i) => {
+      if (i !== matchIdx) return m;
+      return { ...m, games: [...(m.games || []), { godlikeScore: 0, opponentScore: 0 }] };
+    });
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const updateCSGame = (stageIdx, matchIdx, gameIdx, key, val) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.csMatches = (stage.csMatches || []).map((m, i) => {
+      if (i !== matchIdx) return m;
+      return { ...m, games: (m.games || []).map((g, gi) => gi === gameIdx ? { ...g, [key]: val } : g) };
+    });
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+
+  // ─── Standings helpers ───
+  const addStandingsRow = () => ef('standings', [...(editForm.standings || []), { rank: (editForm.standings || []).length + 1, team: '', booyahs: 0, kills: 0, placementPts: 0, points: 0, prizeINR: 0, prizeUSD: 0 }]);
+  const removeStandingsRow = (i) => ef('standings', (editForm.standings || []).filter((_, idx) => idx !== i));
+  const updateStandingsRow = (i, key, val) => ef('standings', (editForm.standings || []).map((r, idx) => idx === i ? { ...r, [key]: val } : r));
+
+  // ─── Journey helpers ───
+  const addJourneyStage = () => ef('godlikeJourney', [...(editForm.godlikeJourney || []), { stage: '', position: '', points: 0, outcome: 'advanced', notes: '' }]);
+  const removeJourneyStage = (i) => ef('godlikeJourney', (editForm.godlikeJourney || []).filter((_, idx) => idx !== i));
+  const updateJourneyStage = (i, key, val) => ef('godlikeJourney', (editForm.godlikeJourney || []).map((s, idx) => idx === i ? { ...s, [key]: val } : s));
+
+  const handleEditSave = () => {
+    const validation = validateTournament(editForm);
+    if (!validation.valid) {
+      setEditErrors(validation.errors);
+      return;
+    }
+    setEditErrors([]);
+    updateTournament(editingId, editForm);
+    setEditSaved(true);
+    setTimeout(() => { setEditSaved(false); closeEdit(); refresh(); }, 1200);
+  };
+
+  return (
+    <div>
+      <h2 className="font-heading font-bold text-2xl text-white mb-6">{labels[statusFilter]} Tournaments</h2>
+
+      {tournaments.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-grey text-lg">No {statusFilter} tournaments.</p>
+          <p className="text-grey text-sm mt-2">Create one from the "Create Tournament" tab.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {tournaments.map(t => (
+            <div key={t.id}>
+              {/* Tournament Card */}
+              <div className="bg-dark border border-dark-border rounded-xl p-5 hover:border-accent/30 transition">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-heading font-bold text-lg text-white truncate">{t.name}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <TierBadge tier={t.tier} />
+                      <span className="text-[10px] text-grey uppercase">{t.gameMode}</span>
+                      <span className="text-[10px] text-grey">{t.region}</span>
+                      <span className="text-[10px] text-grey">{t.teamsCount} teams</span>
+                      {t.prizePoolINR > 0 && <span className="text-[10px] text-accent">INR {t.prizePoolINR.toLocaleString()}</span>}
+                      {t.prizePoolUSD > 0 && <span className="text-[10px] text-accent">${t.prizePoolUSD.toLocaleString()}</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-grey">{t.startDate || '—'} to {t.endDate || '—'}</span>
+                      {t.godlikeFinalPosition && <span className="text-[10px] text-accent font-semibold">GodLike: {t.godlikeFinalPosition}</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 flex-shrink-0">
+                    <button onClick={() => editingId === t.id ? closeEdit() : openEdit(t)} className="px-3 py-1.5 text-xs bg-white/10 hover:bg-white/20 rounded-lg transition font-semibold">
+                      {editingId === t.id ? 'Close' : 'Edit'}
+                    </button>
+                    <button onClick={() => handleDelete(t.id)} className="px-3 py-1.5 text-xs bg-loss/20 text-loss hover:bg-loss/30 rounded-lg transition font-semibold">Delete</button>
+                    {statusFilter === 'upcoming' && (
+                      <>
+                        <button onClick={() => handleGoLive(t.id)} className="px-3 py-1.5 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition font-semibold">Go Live</button>
+                        <button onClick={() => handleMarkComplete(t.id)} className="px-3 py-1.5 text-xs bg-grey/20 text-grey hover:bg-grey/30 rounded-lg transition font-semibold">Mark Complete</button>
+                      </>
+                    )}
+                    {statusFilter === 'live' && (
+                      <>
+                        <button onClick={() => handleMarkComplete(t.id)} className="px-3 py-1.5 text-xs bg-grey/20 text-grey hover:bg-grey/30 rounded-lg transition font-semibold">Mark Complete</button>
+                        <button onClick={() => handleRevert(t.id)} className="px-3 py-1.5 text-xs bg-upcoming-blue/20 text-upcoming-blue hover:bg-upcoming-blue/30 rounded-lg transition font-semibold">Revert</button>
+                      </>
+                    )}
+                    {statusFilter === 'completed' && (
+                      <button onClick={() => handleRevert(t.id)} className="px-3 py-1.5 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition font-semibold">Revert to Live</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Inline Editor */}
+              {editingId === t.id && editForm && (
+                <div className="bg-dark-card border border-accent/30 rounded-xl p-5 mt-2 animate-slide-up">
+                  {editErrors.length > 0 && (
+                    <div className="bg-loss/10 border border-loss/30 rounded-lg p-3 mb-4">
+                      {editErrors.map((e, i) => <p key={i} className="text-loss text-sm">{e}</p>)}
+                    </div>
+                  )}
+                  {editSaved && (
+                    <div className="bg-win/10 border border-win/30 rounded-lg p-3 mb-4">
+                      <p className="text-win text-sm font-semibold">Saved!</p>
+                    </div>
+                  )}
+
+                  {/* Basic Fields */}
+                  <p className="text-grey text-xs uppercase tracking-wider mb-3 font-semibold">Basic Info</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    <Input label="Name" value={editForm.name} onChange={e => ef('name', e.target.value)} />
+                    <Input label="Organizer" value={editForm.organizer} onChange={e => ef('organizer', e.target.value)} />
+                    <Select label="Game Mode" options={GAME_MODE_OPTIONS} value={editForm.gameMode} onChange={e => ef('gameMode', e.target.value)} />
+                    <Input label="Region" value={editForm.region} onChange={e => ef('region', e.target.value)} />
+                    <Select label="Tier" options={TIER_OPTIONS} value={editForm.tier} onChange={e => ef('tier', e.target.value)} />
+                    <Input label="Start Date" type="date" value={editForm.startDate} onChange={e => ef('startDate', e.target.value)} />
+                    <Input label="End Date" type="date" value={editForm.endDate} onChange={e => ef('endDate', e.target.value)} />
+                    <Input label="Teams" type="number" value={editForm.teamsCount} onChange={e => ef('teamsCount', +e.target.value)} />
+                    <Input label="Prize INR" type="number" value={editForm.prizePoolINR} onChange={e => ef('prizePoolINR', +e.target.value)} />
+                    <Input label="Prize USD" type="number" value={editForm.prizePoolUSD} onChange={e => ef('prizePoolUSD', +e.target.value)} />
+                    <Input label="GodLike Position" value={editForm.godlikeFinalPosition} onChange={e => ef('godlikeFinalPosition', e.target.value)} />
+                    <Input label="Liquipedia URL" value={editForm.liquipediaURL || ''} onChange={e => ef('liquipediaURL', e.target.value)} />
+                  </div>
+
+                  {/* Stages */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-grey text-xs uppercase tracking-wider font-semibold">Stages</p>
+                      <button onClick={addStage} className="px-3 py-1 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition">+ Add Stage</button>
+                    </div>
+                    {(editForm.stages || []).map((stage, si) => (
+                      <div key={si} className="bg-dark border border-dark-border rounded-lg p-4 mb-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-accent text-xs font-bold uppercase">Stage {si + 1}</span>
+                          <button onClick={() => removeStage(si)} className="text-xs text-loss hover:text-loss/80 transition">Remove</button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                          <Input label="Name" value={stage.name} onChange={e => updateStage(si, 'name', e.target.value)} />
+                          <Select label="Type" options={STAGE_TYPE_OPTIONS} value={stage.type || 'br_points'} onChange={e => updateStage(si, 'type', e.target.value)} />
+                          <Input label="Teams" type="number" value={stage.teamsInStage || 0} onChange={e => updateStage(si, 'teamsInStage', +e.target.value)} />
+                        </div>
+                        <Input label="Qualification Rule" value={stage.qualificationRule || ''} onChange={e => updateStage(si, 'qualificationRule', e.target.value)} />
+
+                        {/* BR Match Boxes */}
+                        {stage.type === 'br_points' && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-grey text-[10px] uppercase tracking-wider">BR Matches</span>
+                              <button onClick={() => addBRMatch(si)} className="px-2 py-0.5 text-[10px] bg-accent/20 text-accent rounded transition">+ Match</button>
+                            </div>
+                            {(stage.matches || []).map((m, mi) => (
+                              <div key={mi} className="bg-dark-card border border-dark-border/50 rounded-lg p-3 mb-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-accent text-[10px] font-bold">Match {m.matchNum || mi + 1}</span>
+                                  <button onClick={() => removeBRMatch(si, mi)} className="text-[10px] text-loss">Remove</button>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                  <Input label="Placement (1-18)" type="number" value={m.placement || 0} onChange={e => updateBRMatch(si, mi, 'placement', Math.min(18, Math.max(0, +e.target.value)))} error={m.placement && (m.placement < 1 || m.placement > 18) ? '1-18' : ''} />
+                                  <Input label="Kills" type="number" value={m.kills || 0} onChange={e => updateBRMatch(si, mi, 'kills', Math.max(0, +e.target.value))} />
+                                  <div className="flex items-end gap-2">
+                                    <label className="text-grey text-xs">Booyah</label>
+                                    <button
+                                      onClick={() => updateBRMatch(si, mi, 'booyah', !m.booyah)}
+                                      className={`w-10 h-5 rounded-full transition ${m.booyah ? 'bg-accent' : 'bg-dark-border'}`}
+                                    >
+                                      <div className={`w-4 h-4 bg-white rounded-full transition-transform ${m.booyah ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-5 gap-2">
+                                  {['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'].map(p => (
+                                    <Input key={p} label={p} type="number" value={(m.playerKills || {})[p] || 0} onChange={e => updatePlayerKill(si, mi, p, Math.max(0, +e.target.value))} />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* CS Match Boxes */}
+                        {stage.type === 'cs_bracket' && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-grey text-[10px] uppercase tracking-wider">CS Matches</span>
+                              <button onClick={() => addCSMatch(si)} className="px-2 py-0.5 text-[10px] bg-accent/20 text-accent rounded transition">+ CS Match</button>
+                            </div>
+                            {(stage.csMatches || []).map((cm, cmi) => {
+                              const glWins = (cm.games || []).filter(g => g.godlikeScore > g.opponentScore).length;
+                              const opWins = (cm.games || []).filter(g => g.opponentScore > g.godlikeScore).length;
+                              return (
+                                <div key={cmi} className="bg-dark-card border border-dark-border/50 rounded-lg p-3 mb-2">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-accent text-[10px] font-bold">CS Match {cmi + 1}</span>
+                                    <button onClick={() => removeCSMatch(si, cmi)} className="text-[10px] text-loss">Remove</button>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
+                                    <Input label="Round Name" value={cm.roundName || ''} onChange={e => updateCSMatch(si, cmi, 'roundName', e.target.value)} />
+                                    <Select label="Format" options={CS_FORMAT_OPTIONS} value={cm.format || 'Bo3'} onChange={e => updateCSMatch(si, cmi, 'format', e.target.value)} />
+                                    <Input label="Opponent" value={cm.opponent || ''} onChange={e => updateCSMatch(si, cmi, 'opponent', e.target.value)} />
+                                  </div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-grey text-[10px]">Games ({(cm.games || []).length})</span>
+                                    <button onClick={() => addCSGame(si, cmi)} className="px-2 py-0.5 text-[10px] bg-accent/20 text-accent rounded transition">+ Game</button>
+                                  </div>
+                                  {(cm.games || []).map((g, gi) => (
+                                    <div key={gi} className="flex items-center gap-2 mb-1">
+                                      <span className="text-grey text-[10px] w-10">G{gi + 1}</span>
+                                      <Input label="" type="number" value={g.godlikeScore} onChange={e => updateCSGame(si, cmi, gi, 'godlikeScore', +e.target.value)} />
+                                      <span className="text-grey text-xs">vs</span>
+                                      <Input label="" type="number" value={g.opponentScore} onChange={e => updateCSGame(si, cmi, gi, 'opponentScore', +e.target.value)} />
+                                    </div>
+                                  ))}
+                                  {(cm.games || []).length > 0 && (
+                                    <p className="text-accent text-[10px] font-bold mt-1">
+                                      Series: GodLike {glWins} - {opWins} {cm.opponent || 'Opponent'}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Standings */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-grey text-xs uppercase tracking-wider font-semibold">Standings</p>
+                      <button onClick={addStandingsRow} className="px-3 py-1 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition">+ Add Row</button>
+                    </div>
+                    {(editForm.standings || []).length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-grey border-b border-dark-border">
+                              <th className="py-1 px-2 text-left">#</th>
+                              <th className="py-1 px-2 text-left">Team</th>
+                              <th className="py-1 px-2">BYH</th>
+                              <th className="py-1 px-2">Kills</th>
+                              <th className="py-1 px-2">Pos Pts</th>
+                              <th className="py-1 px-2">Total</th>
+                              <th className="py-1 px-2"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(editForm.standings || []).map((r, i) => (
+                              <tr key={i} className="border-b border-dark-border/30">
+                                <td className="py-1 px-2"><input type="number" value={r.rank || ''} onChange={e => updateStandingsRow(i, 'rank', +e.target.value)} className="w-10 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                <td className="py-1 px-2"><input value={r.team || ''} onChange={e => updateStandingsRow(i, 'team', e.target.value)} className="w-full bg-transparent border-b border-dark-border text-white" /></td>
+                                <td className="py-1 px-2"><input type="number" value={r.booyahs || 0} onChange={e => updateStandingsRow(i, 'booyahs', +e.target.value)} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                <td className="py-1 px-2"><input type="number" value={r.kills || 0} onChange={e => updateStandingsRow(i, 'kills', Math.max(0, +e.target.value))} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                <td className="py-1 px-2"><input type="number" value={r.placementPts || 0} onChange={e => updateStandingsRow(i, 'placementPts', +e.target.value)} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                <td className="py-1 px-2"><input type="number" value={r.points || 0} onChange={e => updateStandingsRow(i, 'points', +e.target.value)} className="w-14 bg-transparent border-b border-dark-border text-accent text-center font-bold" /></td>
+                                <td className="py-1 px-2"><button onClick={() => removeStandingsRow(i)} className="text-loss text-[10px]">X</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* GodLike Journey */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-grey text-xs uppercase tracking-wider font-semibold">GodLike's Journey</p>
+                      <button onClick={addJourneyStage} className="px-3 py-1 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition">+ Add Stage</button>
+                    </div>
+                    {(editForm.godlikeJourney || []).map((j, i) => (
+                      <div key={i} className="bg-dark border border-dark-border rounded-lg p-3 mb-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-accent text-[10px] font-bold">Stage {i + 1}</span>
+                          <button onClick={() => removeJourneyStage(i)} className="text-[10px] text-loss">Remove</button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Input label="Stage Name" value={j.stage || ''} onChange={e => updateJourneyStage(i, 'stage', e.target.value)} />
+                          <Input label="Position" value={j.position || ''} onChange={e => updateJourneyStage(i, 'position', e.target.value)} />
+                          <Input label="Points" type="number" value={j.points || 0} onChange={e => updateJourneyStage(i, 'points', +e.target.value)} />
+                          <Select label="Outcome" options={['advanced', 'eliminated', 'champions', 'runner_up']} value={j.outcome || 'advanced'} onChange={e => updateJourneyStage(i, 'outcome', e.target.value)} />
+                          <div className="sm:col-span-2">
+                            <Input label="Notes" value={j.notes || ''} onChange={e => updateJourneyStage(i, 'notes', e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={handleEditSave} className="w-full py-3 bg-accent hover:bg-accent-dark text-white rounded-lg font-heading font-bold text-lg transition">
+                    {editSaved ? '✓ Saved!' : 'Save Changes'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // =================== ADMIN PAGE ===================
 const TABS = [
-  { id: 'matches', label: 'Matches' },
-  { id: 'live', label: 'Live Updater' },
-  { id: 'players', label: 'Players' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'overview', label: 'Overview', group: 'tournaments' },
+  { id: 'create-tournament', label: 'Create', group: 'tournaments' },
+  { id: 'upcoming', label: 'Upcoming', group: 'tournaments' },
+  { id: 'live-tournaments', label: 'Live', group: 'tournaments' },
+  { id: 'completed', label: 'Completed', group: 'tournaments' },
+  { id: 'matches', label: 'Matches', group: 'legacy' },
+  { id: 'live', label: 'Live Updater', group: 'legacy' },
+  { id: 'players', label: 'Players', group: 'legacy' },
+  { id: 'settings', label: 'Settings', group: 'legacy' },
 ];
 
 export default function Admin() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('matches');
+  const [tab, setTab] = useState('overview');
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -470,47 +1105,77 @@ export default function Admin() {
     );
   }
 
+  const tournamentTabs = TABS.filter(t => t.group === 'tournaments');
+  const legacyTabs = TABS.filter(t => t.group === 'legacy');
+
   return (
     <div className="min-h-screen pt-24 pb-16">
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <h1 className="font-heading font-bold text-4xl sm:text-5xl text-white uppercase tracking-wider mb-8">
           Admin <span className="text-accent">Dashboard</span>
         </h1>
 
-        {/* Desktop tabs */}
-        <div className="hidden sm:flex gap-1 mb-8 bg-dark-card border border-dark-border rounded-xl p-1">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex-1 py-2.5 rounded-lg font-heading font-semibold text-sm transition ${
-                tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar */}
+          <div className="lg:w-56 flex-shrink-0">
+            {/* Mobile dropdown */}
+            <div className="lg:hidden mb-4">
+              <select
+                value={tab}
+                onChange={e => setTab(e.target.value)}
+                className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3 text-white font-heading font-semibold focus:border-accent focus:outline-none"
+              >
+                <optgroup label="Tournaments">
+                  {tournamentTabs.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </optgroup>
+                <optgroup label="Management">
+                  {legacyTabs.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </optgroup>
+              </select>
+            </div>
 
-        {/* Mobile dropdown */}
-        <div className="sm:hidden mb-8">
-          <select
-            value={tab}
-            onChange={e => setTab(e.target.value)}
-            className="w-full bg-dark-card border border-dark-border rounded-xl px-4 py-3 text-white font-heading font-semibold focus:border-accent focus:outline-none"
-          >
-            {TABS.map(t => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </select>
-        </div>
+            {/* Desktop sidebar */}
+            <div className="hidden lg:block bg-dark-card border border-dark-border rounded-xl p-2 sticky top-28">
+              <p className="text-grey text-[10px] uppercase tracking-wider font-bold px-3 py-2">Tournaments</p>
+              {tournamentTabs.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg font-heading font-semibold text-sm transition mb-0.5 ${
+                    tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <hr className="border-dark-border my-2" />
+              <p className="text-grey text-[10px] uppercase tracking-wider font-bold px-3 py-2">Management</p>
+              {legacyTabs.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg font-heading font-semibold text-sm transition mb-0.5 ${
+                    tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Tab content */}
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-5 sm:p-8">
-          {tab === 'matches' && <MatchesTab />}
-          {tab === 'live' && <LiveUpdaterTab />}
-          {tab === 'players' && <PlayersTab />}
-          {tab === 'settings' && <SettingsTab />}
+          {/* Content Area */}
+          <div className="flex-1 bg-dark-card border border-dark-border rounded-2xl p-5 sm:p-8 min-w-0">
+            {tab === 'overview' && <OverviewTab setTab={setTab} />}
+            {tab === 'create-tournament' && <CreateTournamentTab onCreated={() => setTab('completed')} />}
+            {tab === 'upcoming' && <TournamentListTab statusFilter="upcoming" setTab={setTab} />}
+            {tab === 'live-tournaments' && <TournamentListTab statusFilter="live" setTab={setTab} />}
+            {tab === 'completed' && <TournamentListTab statusFilter="completed" setTab={setTab} />}
+            {tab === 'matches' && <MatchesTab />}
+            {tab === 'live' && <LiveUpdaterTab />}
+            {tab === 'players' && <PlayersTab />}
+            {tab === 'settings' && <SettingsTab />}
+          </div>
         </div>
       </div>
     </div>

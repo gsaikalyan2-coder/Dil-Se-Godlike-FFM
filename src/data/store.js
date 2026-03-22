@@ -60,10 +60,11 @@ const DEFAULT_MATCHES = [
 ];
 
 const DEFAULT_PLAYERS = [
-  { id: 1, name: 'Player One', game_name: 'GL_Alpha', role: 'IGL', bio: 'Team captain and in-game leader', photo_url: '', is_active: true },
-  { id: 2, name: 'Player Two', game_name: 'GL_Sniper', role: 'Sniper', bio: 'Long range specialist', photo_url: '', is_active: true },
-  { id: 3, name: 'Player Three', game_name: 'GL_Rush', role: 'Entry Fragger', bio: 'Aggressive entry player', photo_url: '', is_active: true },
-  { id: 4, name: 'Player Four', game_name: 'GL_Support', role: 'Support', bio: 'Team support and rotations', photo_url: '', is_active: true },
+  { id: 1, name: 'Player One', game_name: 'GodL.Yogi', role: 'IGL/Sniper', bio: 'Team captain and in-game leader', photo_url: '/players/yogi.png', is_active: true, total_kills: 265, matches_played: 120, best_rank: 1, win_rate: 42, avg_kills: 0, tournaments_played: 15, instagram: '', youtube: '', twitter: '' },
+  { id: 2, name: 'Player Two', game_name: 'GodL.EcoEco', role: 'Sec Rusher/Nader', bio: 'Long range specialist', photo_url: '/players/ecoeco.png', is_active: true, total_kills: 278, matches_played: 119, best_rank: 1, win_rate: 38, avg_kills: 0, tournaments_played: 12, instagram: '', youtube: '', twitter: '' },
+  { id: 3, name: 'Player Three', game_name: 'GodL.Nancy', role: 'Primary Rusher', bio: 'Aggressive entry player', photo_url: '/players/nancy.png', is_active: true, total_kills: 310, matches_played: 125, best_rank: 2, win_rate: 35, avg_kills: 0, tournaments_played: 14, instagram: '', youtube: '', twitter: '' },
+  { id: 4, name: 'Player Four', game_name: 'GodL.Marco', role: 'Rusher/Sniper', bio: 'Team support and rotations', photo_url: '/players/marco.png', is_active: true, total_kills: 198, matches_played: 110, best_rank: 3, win_rate: 40, avg_kills: 0, tournaments_played: 11, instagram: '', youtube: '', twitter: '' },
+  { id: 5, name: 'Player Five', game_name: 'GodL.Nobita', role: 'Rusher/Support', bio: 'Primary rusher and front liner', photo_url: '/players/nobita.png', is_active: true, total_kills: 245, matches_played: 105, best_rank: 2, win_rate: 36, avg_kills: 0, tournaments_played: 10, instagram: '', youtube: '', twitter: '' },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -79,7 +80,7 @@ function getJSON(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw);
-  } catch (e) {}
+  } catch (e) { }
   return fallback;
 }
 
@@ -158,6 +159,12 @@ export function deletePlayer(id) {
 }
 export function getActivePlayers() {
   return getPlayers().filter(p => p.is_active);
+}
+export function getInactivePlayers() {
+  return getPlayers().filter(p => !p.is_active);
+}
+export function getPlayerById(id) {
+  return getPlayers().find(p => p.id === Number(id)) || null;
 }
 
 // Settings

@@ -1,0 +1,318 @@
+
+
+=== prg.html ===
+
+Table 1:
+Match Ranking Points Distribution
+Kill Points | 1 per kill
+Place | Points | Place | Points
+1st | 12 | 7th | 4
+2nd | 9 | 8th | 3
+3rd | 8 | 9th | 2
+4th | 7 | 10th | 1
+5th | 6 | 11th - 12th | 0
+6th | 5 | -
+
+Table 2:
+Group 1
+# | Team | Total |  | PP | KP | Total
+1. | GodLike Esports | 139 | x2 | 48 | 91 | 139
+2. | Jonty Gaming | 130 | x1 | 39 | 91 | 130
+3. | NG Pros | 126 | x1 | 43 | 83 | 126
+4. | True Impact | 121 | x2 | 42 | 79 | 121
+5. | Total Gaming eSports | 109 | x0 | 20 | 89 | 109
+6. | Autobotz Esports | 87 | x0 | 28 | 59 | 87
+7. | Team Identical | 81 | x0 | 32 | 49 | 81
+8. | ITZ Elite | 66 | x0 | 27 | 39 | 66
+9. | Hunt Esports | 49 | x0 | 24 | 25 | 49
+10. | Team Aryavart | 37 | x0 | 16 | 21 | 37
+11. | Air Conqueror | 34 | x0 | 17 | 17 | 34
+12. | Orangutan x TSG | 18 | x0 | 6 | 12 | 18
+
+Table 3:
+Group 2
+# | Team | Total |  | PP | KP | Total
+1. | K9 Esports | 119 | x1 | 50 | 69 | 119
+2. | Team Hind | 98 | x2 | 31 | 67 | 98
+3. | Head Hunters | 98 | x1 | 40 | 58 | 98
+4. | Emz Esports | 91 | x1 | 39 | 52 | 91
+5. | Team Tycoons | 85 | x1 | 23 | 62 | 85
+6. | RNX Esports | 78 | x0 | 28 | 50 | 78
+7. | Meta Ninza | 78 | x0 | 31 | 47 | 78
+8. | Olympians | 68 | x0 | 17 | 51 | 68
+9. | Lannisters | 66 | x0 | 29 | 37 | 66
+10. | S8UL Elite | 62 | x0 | 15 | 47 | 62
+11. | Revenge Esports | 53 | x0 | 17 | 36 | 53
+12. | Phoenix Prime | 52 | x0 | 22 | 30 | 52
+
+Table 4:
+Language | 
+Streams | 
+
+
+=== rapid.html ===
+
+Table 1:
+Match Ranking Points Distribution
+Kill Points | 1 per kill
+Place | Points | Place | Points
+1st | 12 | 7th | 4
+2nd | 9 | 8th | 3
+3rd | 8 | 9th | 2
+4th | 7 | 10th | 1
+5th | 6 | 11th - 12th | 0
+6th | 5 | -
+
+Table 2:
+1 | ANUBHAV
+2 | AZTEC
+3 | CROPSE
+4 | MANNU
+
+Table 3:
+
+Semi Finals #1
+
+Table 4:
+1 | HUNNY
+2 | AIMGOD
+3 | ZIYAN
+4 | DAAFIQ
+
+Table 5:
+
+Semi Finals #2
+
+Table 6:
+1 | VINCENT
+2 | RNS
+3 | SHANKY
+4 | GINOTRA
+
+Table 7:
+
+Semi Finals #3
+
+Table 8:
+1 | YOGI
+2 | NANCY
+3 | NOBITA
+4 | ECO
+
+Table 9:
+
+Semi Finals #4
+
+Table 10:
+1 | ARMAN
+2 | PAHADI
+3 | HASAN
+4 | ADEEB
+
+Table 11:
+
+Fan-Favourite
+
+Table 12:
+1 | AAYUSH
+2 | SHOTO17
+3 | meEgoist7
+4 | KillChor!!
+
+Table 13:
+
+Fan-Favourite
+
+Table 14:
+1 | XPRT08
+2 | Madhav ofc
+3 | Flash.12
+4 | SUSHANT00
+
+Table 15:
+
+Invited
+
+Table 16:
+1 | MR.ANI
+2 | Rupesh69
+3 | GALLAX
+4 | JUN1OR
+
+Table 17:
+
+Invited
+
+Table 18:
+1 | YUNO
+2 | MOKHIRA
+3 | FIREFOX
+4 | HUNNYkh
+
+Table 19:
+
+Invited
+
+Table 20:
+1 | XDIVINE
+2 | MARVEL
+3 | ARSH
+4 | ROSHAN2
+
+Table 21:
+
+Semi Finals #5
+
+Table 22:
+1 | Mystrious
+2 | Sohel
+3 | LOYER
+4 | TBD
+
+Table 23:
+
+Semi Finals #6
+
+Table 24:
+1 | SWARUP
+2 | POWER
+3 | PATLUU
+4 | TIGER
+
+Table 25:
+
+Semi Finals #7
+
+Table 26:
+1 | ABHImvp
+2 | MADGOD
+3 | SENPAI07
+4 | HARD!K18
+
+Table 27:
+
+Semi Finals #8
+
+Table 28:
+1 | RONITH
+2 | WOTA
+3 | SOHAN
+4 | CheeTah
+
+Table 29:
+
+Semi Finals #9
+
+Table 30:
+1 | KID
+2 | ARJUNN
+3 | PANDAT
+4 | Krish
+
+Table 31:
+
+Semi Finals #10
+
+Table 32:
+1 | SALLU
+2 | HACKER
+3 | ANSHU26
+4 | SPARK
+
+Table 33:
+
+Semi Finals #11
+
+Table 34:
+1 | AD4N22
+2 | Flamee45
+3 | TUSHAR18
+4 | SKY21
+
+Table 35:
+
+Semi Finals #12
+
+Table 36:
+1 | NOOR18
+2 | TROLL69
+3 | PR1NXZZ
+4 | JACK07
+
+Table 37:
+
+Semi Finals #13
+
+Table 38:
+1 | GOPUOP
+2 | FARHAN
+3 | AMIN
+4 | HITMAN
+
+Table 39:
+
+Semi Finals #14
+
+Table 40:
+1 | SCARY
+2 | Avneeet
+3 | Nitin-Tkr47
+4 | GOJO
+
+Table 41:
+
+Semi Finals #15
+
+Table 42:
+1 | ALONEQe7
+2 | HERO1
+3 | SP4RK
+4 | GUTS
+
+Table 43:
+
+Semi Finals #18
+
+Table 44:
+Overall Standings
+# | Team | Total |  | Total
+1. | Reckoning Esports | 145 | x3 | 145
+2. | Olympians | 123 | x1 | 123
+3. | Ultra Instinct | 94 | x0 | 94
+4. | RTX Esports | 91 | x0 | 91
+5. | Head Hunters | 82 | x0 | 82
+6. | Autobotz Esports | 78 | x2 | 78
+7. | RM Esports | 72 | x0 | 72
+8. | KV18 | 56 | x0 | 56
+9. | BFA x Rackers | 51 | x0 | 51
+10. | TSG Army | 40 | x0 | 40
+11. | Team Chaos | 36 | x0 | 36
+12. | Team Jay YT | 27 | x0 | 27
+
+Table 45:
+Round 2Round 1Round 2Grand Finals
+# | Participant |  | Points | Day 1 | Day 2
+1. | K9 EsportsK9 | - | 125 | 125 | 
+2. | NG ProsNG | - | 112 | 112 | 
+3. | Reckoning EsportsRCKN | - | 98 | 98 | 
+4. | Godlike EsportsGODL | - | 97 | 97 | 
+5. | Total Gaming eSportsTG | - | 94 | 94 | 
+6. | Team ForeverTF | - | 84 | 84 | 
+7. | Emz EsportsEMZ | - | 69 | 69 | 
+8. | Meta NinzaMNZ | - | 68 | 68 | 
+9. | OlympiansOS | - | 56 | 56 | 
+10. | Ultra InstinctUI | - | 50 | 50 | 
+11. | S8UL EliteS8UL | - | 41 | 41 | 
+12. | LXP EliteLXE | - | 30 | 30 | 
+1. | K9 EsportsK9 | - | 265 | 125 | 140
+2. | NG ProsNG | - | 215 | 112 | 103
+3. | Total Gaming eSportsTG | ▲2 | 197 | 94 | 103
+4. | Reckoning EsportsRCKN | ▼1 | 189 | 98 | 91
+5. | Godlike EsportsGODL | ▼1 | 188 | 97 | 91
+6. | Team ForeverTF | - | 159 | 84 | 75
+7. | Meta NinzaMNZ | ▲1 | 126 | 68 | 58
+8. | OlympiansOS | ▲1 | 115 | 56 | 59
+9. | Emz EsportsEMZ | ▼2 | 114 | 69 | 45
+10. | Ultra InstinctUI | - | 104 | 50 | 54
+11. | LXP EliteLXE | ▲1 | 95 | 30 | 65
+12. | S8UL EliteS8UL | ▼1 | 50 | 41 | 9

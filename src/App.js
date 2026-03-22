@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { initStore } from './data/store';
+import { initTournamentStore } from './data/tournamentStore';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -9,9 +10,12 @@ import Roster from './pages/Roster';
 import Schedule from './pages/Schedule';
 import History from './pages/History';
 import Admin from './pages/Admin';
+import PlayerProfile from './pages/PlayerProfile';
+import Tournaments from './pages/Tournaments';
 
 // Initialize localStorage with defaults on first load
 initStore();
+initTournamentStore();
 
 export default function App() {
   return (
@@ -25,6 +29,8 @@ export default function App() {
             <Route path="/roster" element={<Roster />} />
             <Route path="/schedule" element={<Schedule />} />
             <Route path="/history" element={<History />} />
+            <Route path="/tournaments" element={<Tournaments />} />
+            <Route path="/player/:id" element={<PlayerProfile />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>

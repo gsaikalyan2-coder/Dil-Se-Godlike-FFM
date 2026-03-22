@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getLiveMatch } from '../data/store';
+import { useLiveTournament } from '../hooks/useTournamentStoreSync';
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -8,6 +9,7 @@ const navLinks = [
   { to: '/roster', label: 'Roster' },
   { to: '/schedule', label: 'Schedule' },
   { to: '/history', label: 'History' },
+  { to: '/tournaments', label: 'Tournaments' },
   { to: '/admin', label: 'Admin' },
 ];
 
@@ -15,36 +17,40 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const live = getLiveMatch();
+  const liveTournament = useLiveTournament();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-dark/95 backdrop-blur-sm border-b border-dark-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 no-underline">
-            <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-              <span className="text-white font-heading font-bold text-sm">GL</span>
-            </div>
-            <span className="font-heading font-bold text-xl text-white">
-              GODLIKE <span className="text-accent">FFM</span>
-            </span>
-          </Link>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#FFB800] border-b border-[#E6A600]">
+      {/* Logo - absolute top-left corner of screen */}
+      <Link to="/" className="absolute top-0 left-0 sm:left-4 z-[60] flex items-center h-16 transition-opacity hover:opacity-80">
+        <img 
+          src="/images/images (2).png" 
+          alt="GodLike FFM Logo" 
+          className="w-[190px] sm:w-[200px] h-full object-contain object-left drop-shadow-sm scale-110 sm:scale-[1.3] origin-left"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />
+      </Link>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-16 relative">
           {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2">
             {navLinks.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors no-underline ${
+                className={`px-4 py-2 rounded-md text-sm font-bold transition-all no-underline ${
                   location.pathname === link.to
-                    ? 'text-accent bg-accent/10'
-                    : 'text-grey-light hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-black'
+                    : 'text-black hover:bg-black/10 hover:text-black'
                 }`}
               >
                 {link.label}
                 {link.to === '/live' && live && (
-                  <span className="ml-1.5 inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse-live" />
+                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
+                )}
+                {link.to === '/' && liveTournament && (
+                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
                 )}
               </Link>
             ))}
@@ -53,7 +59,7 @@ export default function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setOpen(!open)}
-            className="md:hidden text-white p-2 rounded-md hover:bg-white/10 transition"
+            className="md:hidden absolute right-0 text-black p-2 rounded-md hover:bg-black/10 transition"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {open ? (
@@ -68,22 +74,25 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t border-dark-border bg-dark/95 backdrop-blur-sm">
+        <div className="md:hidden border-t border-[#E6A600] bg-[#FFB800]">
           <div className="px-4 py-3 space-y-1">
             {navLinks.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
                 onClick={() => setOpen(false)}
-                className={`block px-3 py-2 rounded-md text-sm font-medium no-underline ${
+                className={`block px-3 py-2 rounded-lg text-sm font-bold no-underline ${
                   location.pathname === link.to
-                    ? 'text-accent bg-accent/10'
-                    : 'text-grey-light hover:text-white'
+                    ? 'text-white bg-black'
+                    : 'text-black hover:bg-black/10 hover:text-black'
                 }`}
               >
                 {link.label}
                 {link.to === '/live' && live && (
-                  <span className="ml-1.5 inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse-live" />
+                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
+                )}
+                {link.to === '/' && liveTournament && (
+                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
                 )}
               </Link>
             ))}

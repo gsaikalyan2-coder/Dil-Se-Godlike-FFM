@@ -1,0 +1,250 @@
+--- TABLE 0 ---
+
+
+--- TABLE 3 ---
+Row 0: Place | $ USD | ₹ INR | Participant
+Row 1: 1st | $275.38 | ₹25,000 | Team Hind
+Row 2: 2nd | $137.69 | ₹12,500 | NG Pros
+Row 3: 3rd | $82.61 | ₹7,500 | GodLike Esports
+Row 4: place 4 to 24 | place 4 to 24
+Row 5: 4th | - | - | RNX Esports
+Row 6: 5th | - | - | True Impact
+Row 7: 6th | - | - | Jonty Gaming
+Row 8: 7th | - | - | Autobotz Esports
+Row 9: 8th | - | - | Head Hunters
+Row 10: 9th | - | - | Emz Esports
+Row 11: 10th | - | - | K9 Esports
+Row 12: 11th | - | - | Total Gaming eSports
+Row 13: 12th | - | - | Team Tycoons
+Row 14: 13th-24th | - | - | Team Identical | Meta Ninza | Olympians | Lannisters | ITZ Elite | S8UL Elite | Revenge Esports | Phoenix Prime | Hunt Esports | Team Aryavart | Air Conqueror | Orangutan x TSG
+Row 15: Award | $ USD | ₹ INR | Participant
+Row 16: Best Performing Undergod Team | $55.08 | ₹5,000 | Lannisters
+
+
+--- TABLE 4 ---
+Row 0: Place | $ USD | ₹ INR | Participant
+Row 1: 1st | $275.38 | ₹25,000 | Team Hind
+Row 2: 2nd | $137.69 | ₹12,500 | NG Pros
+Row 3: 3rd | $82.61 | ₹7,500 | GodLike Esports
+Row 4: place 4 to 24 | place 4 to 24
+Row 5: 4th | - | - | RNX Esports
+Row 6: 5th | - | - | True Impact
+Row 7: 6th | - | - | Jonty Gaming
+Row 8: 7th | - | - | Autobotz Esports
+Row 9: 8th | - | - | Head Hunters
+Row 10: 9th | - | - | Emz Esports
+Row 11: 10th | - | - | K9 Esports
+Row 12: 11th | - | - | Total Gaming eSports
+Row 13: 12th | - | - | Team Tycoons
+Row 14: 13th-24th | - | - | Team Identical | Meta Ninza | Olympians | Lannisters | ITZ Elite | S8UL Elite | Revenge Esports | Phoenix Prime | Hunt Esports | Team Aryavart | Air Conqueror | Orangutan x TSG
+
+
+--- TABLE 10 ---
+
+
+--- TABLE 14 ---
+
+
+--- TABLE 20 ---
+
+
+--- TABLE 24 ---
+
+
+--- TABLE 100 ---
+Row 0: Group 1
+Row 1: # | Team | Total | PP | KP | Total
+Row 2: 1. | GodLike Esports | 139 | x2 | 48 | 91 | 139
+Row 3: 2. | Jonty Gaming | 130 | x1 | 39 | 91 | 130
+Row 4: 3. | NG Pros | 126 | x1 | 43 | 83 | 126
+Row 5: 4. | True Impact | 121 | x2 | 42 | 79 | 121
+Row 6: 5. | Total Gaming eSports | 109 | x0 | 20 | 89 | 109
+Row 7: 6. | Autobotz Esports | 87 | x0 | 28 | 59 | 87
+Row 8: 7. | Team Identical | 81 | x0 | 32 | 49 | 81
+Row 9: 8. | ITZ Elite | 66 | x0 | 27 | 39 | 66
+Row 10: 9. | Hunt Esports | 49 | x0 | 24 | 25 | 49
+Row 11: 10. | Team Aryavart | 37 | x0 | 16 | 21 | 37
+Row 12: 11. | Air Conqueror | 34 | x0 | 17 | 17 | 34
+Row 13: 12. | Orangutan x TSG | 18 | x0 | 6 | 12 | 18
+
+
+--- TABLE 101 ---
+Row 0: Group 1
+Row 1: # | Team | Total | PP | KP | Total
+Row 2: 1. | GodLike Esports | 139 | x2 | 48 | 91 | 139
+Row 3: 2. | Jonty Gaming | 130 | x1 | 39 | 91 | 130
+Row 4: 3. | NG Pros | 126 | x1 | 43 | 83 | 126
+Row 5: 4. | True Impact | 121 | x2 | 42 | 79 | 121
+Row 6: 5. | Total Gaming eSports | 109 | x0 | 20 | 89 | 109
+Row 7: 6. | Autobotz Esports | 87 | x0 | 28 | 59 | 87
+Row 8: 7. | Team Identical | 81 | x0 | 32 | 49 | 81
+Row 9: 8. | ITZ Elite | 66 | x0 | 27 | 39 | 66
+Row 10: 9. | Hunt Esports | 49 | x0 | 24 | 25 | 49
+Row 11: 10. | Team Aryavart | 37 | x0 | 16 | 21 | 37
+Row 12: 11. | Air Conqueror | 34 | x0 | 17 | 17 | 34
+Row 13: 12. | Orangutan x TSG | 18 | x0 | 6 | 12 | 18
+
+
+--- TABLE 102 ---
+Row 0: Group 2
+Row 1: # | Team | Total | PP | KP | Total
+Row 2: 1. | K9 Esports | 119 | x1 | 50 | 69 | 119
+Row 3: 2. | Team Hind | 98 | x2 | 31 | 67 | 98
+Row 4: 3. | Head Hunters | 98 | x1 | 40 | 58 | 98
+Row 5: 4. | Emz Esports | 91 | x1 | 39 | 52 | 91
+Row 6: 5. | Team Tycoons | 85 | x1 | 23 | 62 | 85
+Row 7: 6. | RNX Esports | 78 | x0 | 28 | 50 | 78
+Row 8: 7. | Meta Ninza | 78 | x0 | 31 | 47 | 78
+Row 9: 8. | Olympians | 68 | x0 | 17 | 51 | 68
+Row 10: 9. | Lannisters | 66 | x0 | 29 | 37 | 66
+Row 11: 10. | S8UL Elite | 62 | x0 | 15 | 47 | 62
+Row 12: 11. | Revenge Esports | 53 | x0 | 17 | 36 | 53
+Row 13: 12. | Phoenix Prime | 52 | x0 | 22 | 30 | 52
+
+
+--- TABLE 103 ---
+Row 0: Group 2
+Row 1: # | Team | Total | PP | KP | Total
+Row 2: 1. | K9 Esports | 119 | x1 | 50 | 69 | 119
+Row 3: 2. | Team Hind | 98 | x2 | 31 | 67 | 98
+Row 4: 3. | Head Hunters | 98 | x1 | 40 | 58 | 98
+Row 5: 4. | Emz Esports | 91 | x1 | 39 | 52 | 91
+Row 6: 5. | Team Tycoons | 85 | x1 | 23 | 62 | 85
+Row 7: 6. | RNX Esports | 78 | x0 | 28 | 50 | 78
+Row 8: 7. | Meta Ninza | 78 | x0 | 31 | 47 | 78
+Row 9: 8. | Olympians | 68 | x0 | 17 | 51 | 68
+Row 10: 9. | Lannisters | 66 | x0 | 29 | 37 | 66
+Row 11: 10. | S8UL Elite | 62 | x0 | 15 | 47 | 62
+Row 12: 11. | Revenge Esports | 53 | x0 | 17 | 36 | 53
+Row 13: 12. | Phoenix Prime | 52 | x0 | 22 | 30 | 52
+
+
+--- TABLE 105 ---
+
+
+--- TABLE 106 ---
+
+
+--- TABLE 116 ---
+
+
+--- TABLE 117 ---
+
+
+--- TABLE 220 ---
+
+
+--- TABLE 221 ---
+
+
+--- TABLE 222 ---
+
+
+--- TABLE 226 ---
+
+
+--- TABLE 229 ---
+
+
+--- TABLE 230 ---
+
+
+--- TABLE 233 ---
+
+
+--- TABLE 234 ---
+
+
+--- TABLE 235 ---
+
+
+--- TABLE 236 ---
+
+
+--- TABLE 288 ---
+
+
+--- TABLE 293 ---
+
+
+--- TABLE 294 ---
+
+
+--- TABLE 350 ---
+
+
+--- TABLE 353 ---
+
+
+--- TABLE 354 ---
+
+
+--- TABLE 355 ---
+
+
+--- TABLE 356 ---
+
+
+--- TABLE 536 ---
+
+
+--- TABLE 543 ---
+
+
+--- TABLE 571 ---
+
+
+--- TABLE 572 ---
+
+
+--- TABLE 573 ---
+
+
+--- TABLE 574 ---
+
+
+--- TABLE 575 ---
+
+
+--- TABLE 576 ---
+
+
+--- TABLE 784 ---
+
+
+--- TABLE 791 ---
+
+
+--- TABLE 813 ---
+
+
+--- TABLE 814 ---
+
+
+--- TABLE 815 ---
+
+
+--- TABLE 816 ---
+
+
+--- TABLE 817 ---
+
+
+--- TABLE 818 ---
+
+
+--- TABLE 846 ---
+
+
+--- TABLE 853 ---
+
+
+--- TABLE 860 ---
+
+
+--- TABLE 861 ---
+
+
+--- TABLE 862 ---
+
+
