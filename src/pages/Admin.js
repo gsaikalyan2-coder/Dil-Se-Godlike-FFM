@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   getMatches, addMatch, updateMatch, deleteMatch, setLiveMatch,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
@@ -9,7 +9,12 @@ import {
   createTournament, updateTournament, deleteTournament,
   goLive, markComplete, revertStatus, validateTournament,
   createBlankTournament,
+  getActivityLog, clearActivityLog,
+  undo, redo, canUndo, canRedo,
+  computeAutoStandings, recalculateGodlikeStandings,
+  duplicateTournament, exportTournamentAsMarkdown,
 } from '../data/tournamentStore';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const ROLES = ['IGL', 'Sniper', 'Assaulter', 'Support', 'Entry Fragger'];
 const STATUSES = ['LIVE', 'UPCOMING', 'FINISHED'];
@@ -18,6 +23,31 @@ const GAME_MODE_OPTIONS = ['BR', 'CS'];
 const TOURNAMENT_STATUS_OPTIONS = ['upcoming', 'live', 'completed'];
 const STAGE_TYPE_OPTIONS = ['br_points', 'cs_bracket', 'round_robin', 'swiss'];
 const CS_FORMAT_OPTIONS = ['Bo1', 'Bo3', 'Bo5'];
+const CHART_COLORS = ['#c9a84c', '#6366f1', '#22c55e', '#ef4444', '#3b82f6', '#f59e0b'];
+
+function relativeTime(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+}
+
+function ConfirmDialog({ open, title, message, onConfirm, onCancel }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 animate-slide-up">
+      <div className="bg-dark-card border border-dark-border rounded-2xl p-6 max-w-sm w-full mx-4">
+        <h3 className="font-heading font-bold text-lg text-white mb-2">{title}</h3>
+        <p className="text-grey text-sm mb-6">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <button onClick={onCancel} className="px-4 py-2 bg-dark border border-dark-border text-grey hover:text-white rounded-lg transition text-sm">Cancel</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-loss hover:bg-loss/80 text-white rounded-lg font-semibold transition text-sm">Confirm</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Input({ label, error, ...props }) {
   return (
@@ -467,6 +497,341 @@ function SettingsTab() {
   );
 }
 
+// =================== LIVE CONTROL PANEL TAB ===================
+function LiveControlPanelTab() {
+  const [liveTournaments, setLiveTournaments] = useState(getTournamentsByStatus('live'));
+  const [selectedId, setSelectedId] = useState('');
+  const [tournament, setTournament] = useState(null);
+  const [autoStandings, setAutoStandings] = useState(true);
+  const [toast, setToast] = useState('');
+
+  const refresh = useCallback(() => {
+    const live = getTournamentsByStatus('live');
+    setLiveTournaments(live);
+    if (selectedId) {
+      const t = live.find(x => x.id === selectedId);
+      setTournament(t || null);
+    }
+  }, [selectedId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (liveTournaments.length > 0 && !selectedId) {
+      setSelectedId(liveTournaments[0].id);
+      setTournament(liveTournaments[0]);
+    }
+  }, [liveTournaments, selectedId]);
+
+  const selectTournament = (id) => {
+    setSelectedId(id);
+    const t = liveTournaments.find(x => x.id === id);
+    setTournament(t || null);
+  };
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
+
+  // Quick add match to the last stage
+  const addQuickMatch = (placement, kills, booyah, playerKills) => {
+    if (!tournament || !tournament.stages || tournament.stages.length === 0) return;
+    const stages = [...tournament.stages];
+    const lastStage = { ...stages[stages.length - 1] };
+    const matches = [...(lastStage.matches || [])];
+    matches.push({
+      matchNum: matches.length + 1,
+      placement: placement || 0,
+      kills: kills || 0,
+      booyah: booyah || false,
+      playerKills: playerKills || { YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 },
+    });
+    lastStage.matches = matches;
+    stages[stages.length - 1] = lastStage;
+    updateTournament(selectedId, { stages });
+    if (autoStandings) recalculateGodlikeStandings(selectedId);
+    showToast('Match saved!');
+    refresh();
+  };
+
+  const handleEndTournament = () => {
+    if (!selectedId) return;
+    markComplete(selectedId);
+    showToast('Tournament marked complete');
+    refresh();
+  };
+
+  // Quick entry state
+  const [qPlacement, setQPlacement] = useState(0);
+  const [qKills, setQKills] = useState(0);
+  const [qBooyah, setQBooyah] = useState(false);
+  const [qPlayerKills, setQPlayerKills] = useState({ YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 });
+
+  const totalPlayerKills = Object.values(qPlayerKills).reduce((a, b) => a + b, 0);
+  const killMismatch = qKills > 0 && totalPlayerKills > 0 && totalPlayerKills !== qKills;
+
+  const handleSaveMatch = () => {
+    addQuickMatch(qPlacement, qKills, qBooyah, { ...qPlayerKills });
+    setQPlacement(0); setQKills(0); setQBooyah(false);
+    setQPlayerKills({ YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 });
+  };
+
+  const autoSummary = tournament ? computeAutoStandings(tournament) : null;
+
+  return (
+    <div>
+      <h2 className="font-heading font-bold text-2xl text-white mb-6">Live Control Panel</h2>
+
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 bg-win/90 text-white px-4 py-2 rounded-lg text-sm font-semibold animate-slide-up">
+          {toast}
+        </div>
+      )}
+
+      {liveTournaments.length === 0 ? (
+        <div className="text-center py-10">
+          <p className="text-grey text-lg">No live tournaments.</p>
+          <p className="text-grey text-sm mt-2">Move a tournament to LIVE status first.</p>
+        </div>
+      ) : (
+        <>
+          {/* Tournament Selector */}
+          <div className="mb-6">
+            <label className="block text-grey text-sm mb-2">Select Tournament</label>
+            <select
+              value={selectedId}
+              onChange={e => selectTournament(e.target.value)}
+              className="w-full bg-dark border border-dark-border rounded-lg px-3 py-3 text-white focus:border-accent focus:outline-none transition"
+            >
+              {liveTournaments.map(t => (
+                <option key={t.id} value={t.id}>{t.name} — {t.gameMode}</option>
+              ))}
+            </select>
+          </div>
+
+          {tournament && (
+            <div className="space-y-6">
+              {/* Current match indicator */}
+              <div className="bg-dark border border-green-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Live Now</span>
+                </div>
+                <p className="text-white font-heading font-bold text-lg">{tournament.name}</p>
+                <p className="text-grey text-xs">{tournament.organizer} — {tournament.gameMode} — {tournament.stages?.length || 0} stages — Match #{(tournament.stages?.at(-1)?.matches?.length || 0) + 1}</p>
+              </div>
+
+              {/* Quick Score Entry */}
+              <div className="bg-dark-card border border-dark-border rounded-xl p-5">
+                <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Quick Score Entry</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+                  <Input label="Placement (1-18)" type="number" value={qPlacement} onChange={e => setQPlacement(Math.min(18, Math.max(0, +e.target.value)))} />
+                  <Input label="Total Kills" type="number" value={qKills} onChange={e => setQKills(Math.max(0, +e.target.value))} />
+                  <div className="flex items-end gap-2">
+                    <label className="text-grey text-xs">Booyah</label>
+                    <button
+                      onClick={() => setQBooyah(!qBooyah)}
+                      className={`w-10 h-5 rounded-full transition ${qBooyah ? 'bg-accent' : 'bg-dark-border'}`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full transition-transform ${qBooyah ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Per-player kills */}
+                <p className="text-grey text-[10px] uppercase tracking-wider mb-2">Player Kills</p>
+                <div className="grid grid-cols-5 gap-2 mb-3">
+                  {['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'].map(p => (
+                    <div key={p} className="text-center">
+                      <p className="text-grey text-[9px] mb-1">{p}</p>
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="number"
+                          value={qPlayerKills[p]}
+                          onChange={e => setQPlayerKills(prev => ({ ...prev, [p]: Math.max(0, +e.target.value) }))}
+                          className="w-10 bg-dark border border-dark-border rounded text-white text-center text-xs py-1"
+                        />
+                        <button
+                          onClick={() => setQPlayerKills(prev => ({ ...prev, [p]: prev[p] + 1 }))}
+                          className="px-1.5 py-1 bg-win/20 text-win rounded text-[10px] hover:bg-win/30 transition"
+                        >+1</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {killMismatch && (
+                  <p className="text-yellow-400 text-[10px] mb-3">Player kills ({totalPlayerKills}) don't match total kills ({qKills})</p>
+                )}
+
+                <div className="flex gap-3">
+                  <button onClick={handleSaveMatch} className="flex-1 py-3 bg-accent hover:bg-accent-dark text-white rounded-lg font-heading font-bold transition">
+                    Save Match
+                  </button>
+                  <button onClick={handleEndTournament} className="px-4 py-3 bg-loss/20 text-loss hover:bg-loss/30 rounded-lg font-semibold transition text-sm">
+                    End Tournament
+                  </button>
+                </div>
+              </div>
+
+              {/* Auto-standings toggle & summary */}
+              <div className="bg-dark border border-dark-border rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-grey text-xs uppercase tracking-wider font-semibold">Auto-Standings</p>
+                  <button
+                    onClick={() => setAutoStandings(!autoStandings)}
+                    className={`w-10 h-5 rounded-full transition ${autoStandings ? 'bg-accent' : 'bg-dark-border'}`}
+                  >
+                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${autoStandings ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+                {autoSummary && (
+                  <div className="grid grid-cols-4 gap-3 text-center">
+                    <div><p className="text-grey text-[9px] uppercase">Matches</p><p className="text-white font-bold">{autoSummary.matchesPlayed}</p></div>
+                    <div><p className="text-grey text-[9px] uppercase">Kills</p><p className="text-white font-bold">{autoSummary.kills}</p></div>
+                    <div><p className="text-grey text-[9px] uppercase">Points</p><p className="text-accent font-bold">{autoSummary.points}</p></div>
+                    <div><p className="text-grey text-[9px] uppercase">Booyahs</p><p className="text-yellow-400 font-bold">{autoSummary.booyahs}</p></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// =================== ANALYTICS TAB ===================
+function AnalyticsTab() {
+  const completed = getTournamentsByStatus('completed');
+
+  // Stat calculations
+  const totalTournaments = completed.length;
+  let totalMatches = 0, totalKills = 0, totalBooyahs = 0, totalPlacementSum = 0, matchesWithPlacement = 0;
+  const tierCounts = {};
+  const killsPerGame = [];
+
+  completed.forEach(t => {
+    tierCounts[t.tier] = (tierCounts[t.tier] || 0) + 1;
+    (t.stages || []).forEach(stage => {
+      (stage.matches || []).forEach(m => {
+        totalMatches++;
+        totalKills += m.kills || 0;
+        if (m.booyah) totalBooyahs++;
+        if (m.placement > 0) { totalPlacementSum += m.placement; matchesWithPlacement++; }
+        killsPerGame.push({ game: `G${killsPerGame.length + 1}`, kills: m.kills || 0 });
+      });
+    });
+  });
+
+  const avgPosition = matchesWithPlacement > 0 ? (totalPlacementSum / matchesWithPlacement).toFixed(1) : '—';
+  const winRate = totalMatches > 0 ? ((totalBooyahs / totalMatches) * 100).toFixed(1) : '0';
+  const avgKills = totalMatches > 0 ? (totalKills / totalMatches).toFixed(1) : '0';
+
+  // Chart data
+  const tierData = Object.entries(tierCounts).map(([tier, count]) => ({ name: tier + '-Tier', value: count }));
+  const winRateData = [
+    { name: 'Booyahs', value: totalBooyahs },
+    { name: 'Other', value: Math.max(0, totalMatches - totalBooyahs) },
+  ];
+
+  const tournamentHistory = completed.slice(0, 10).reverse().map(t => {
+    const auto = computeAutoStandings(t);
+    return { name: t.name.length > 12 ? t.name.slice(0, 12) + '...' : t.name, kills: auto?.kills || 0, points: auto?.points || 0 };
+  });
+
+  return (
+    <div>
+      <h2 className="font-heading font-bold text-2xl text-white mb-6">Analytics</h2>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'Avg Position', value: avgPosition, color: 'text-upcoming-blue' },
+          { label: 'Win Rate', value: `${winRate}%`, color: 'text-win' },
+          { label: 'Avg Kills/Game', value: avgKills, color: 'text-accent' },
+          { label: 'Tournaments', value: totalTournaments, color: 'text-white' },
+        ].map(s => (
+          <div key={s.label} className="bg-dark border border-dark-border rounded-xl p-4 text-center">
+            <p className="text-grey text-[10px] uppercase tracking-wider mb-1">{s.label}</p>
+            <p className={`font-heading font-bold text-2xl ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {totalMatches > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Win Rate Donut */}
+          <div className="bg-dark border border-dark-border rounded-xl p-5">
+            <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Win Rate</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={winRateData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" stroke="none">
+                  {winRateData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#1a1a1f', border: '1px solid #2a2a2f', borderRadius: 8, color: '#fff' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tier Breakdown */}
+          <div className="bg-dark border border-dark-border rounded-xl p-5">
+            <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Tier Breakdown</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={tierData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2f" />
+                <XAxis dataKey="name" tick={{ fill: '#888', fontSize: 10 }} />
+                <YAxis tick={{ fill: '#888', fontSize: 10 }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: '#1a1a1f', border: '1px solid #2a2a2f', borderRadius: 8, color: '#fff' }} />
+                <Bar dataKey="value" fill="#c9a84c" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Kills Trend */}
+          {killsPerGame.length > 1 && (
+            <div className="bg-dark border border-dark-border rounded-xl p-5">
+              <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Kills Per Game (Trend)</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={killsPerGame.slice(-20)}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2f" />
+                  <XAxis dataKey="game" tick={{ fill: '#888', fontSize: 10 }} />
+                  <YAxis tick={{ fill: '#888', fontSize: 10 }} />
+                  <Tooltip contentStyle={{ background: '#1a1a1f', border: '1px solid #2a2a2f', borderRadius: 8, color: '#fff' }} />
+                  <Line type="monotone" dataKey="kills" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Tournament History */}
+          {tournamentHistory.length > 0 && (
+            <div className="bg-dark border border-dark-border rounded-xl p-5">
+              <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Tournament History</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={tournamentHistory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2f" />
+                  <XAxis dataKey="name" tick={{ fill: '#888', fontSize: 8 }} angle={-20} textAnchor="end" height={50} />
+                  <YAxis tick={{ fill: '#888', fontSize: 10 }} />
+                  <Tooltip contentStyle={{ background: '#1a1a1f', border: '1px solid #2a2a2f', borderRadius: 8, color: '#fff' }} />
+                  <Bar dataKey="kills" fill="#ef4444" radius={[4, 4, 0, 0]} name="Kills" />
+                  <Bar dataKey="points" fill="#c9a84c" radius={[4, 4, 0, 0]} name="Points" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
+      {totalMatches === 0 && (
+        <div className="text-center py-10">
+          <p className="text-grey text-lg">No match data yet.</p>
+          <p className="text-grey text-sm mt-2">Analytics will appear once tournaments have match results.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // =================== OVERVIEW TAB ===================
 function OverviewTab({ setTab }) {
   const index = getTournamentIndex();
@@ -631,35 +996,78 @@ function TournamentListTab({ statusFilter, setTab }) {
   const [editForm, setEditForm] = useState(null);
   const [editErrors, setEditErrors] = useState([]);
   const [editSaved, setEditSaved] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', message: '', onConfirm: null });
+  const [toast, setToast] = useState('');
+  const [previewId, setPreviewId] = useState(null);
+  const autoSaveTimer = useRef(null);
 
-  const refresh = () => setTournaments(getTournamentsByStatus(statusFilter));
+  const refresh = useCallback(() => setTournaments(getTournamentsByStatus(statusFilter)), [statusFilter]);
 
-  useEffect(() => { refresh(); }, [statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { refresh(); }, [refresh]);
+
+  // Escape key to close editor
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape' && editingId) closeEdit(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
   const labels = { upcoming: 'Upcoming', live: 'Live', completed: 'Completed' };
 
+  const confirm = (title, message, onConfirm) => setConfirmDialog({ open: true, title, message, onConfirm });
+  const closeConfirm = () => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null });
+
   const handleDelete = (id) => {
-    if (!window.confirm('Delete this tournament? This cannot be undone.')) return;
-    deleteTournament(id);
-    refresh();
+    confirm('Delete Tournament', 'Delete this tournament? This cannot be undone.', () => {
+      deleteTournament(id);
+      refresh();
+      closeConfirm();
+    });
   };
 
   const handleGoLive = (id) => {
-    if (!window.confirm('Move this tournament to LIVE status?')) return;
-    goLive(id);
-    refresh();
+    confirm('Go Live', 'Move this tournament to LIVE status?', () => {
+      goLive(id);
+      refresh();
+      closeConfirm();
+    });
   };
 
   const handleMarkComplete = (id) => {
-    if (!window.confirm('Mark this tournament as COMPLETED?')) return;
-    markComplete(id);
-    refresh();
+    confirm('Mark Complete', 'Mark this tournament as COMPLETED?', () => {
+      markComplete(id);
+      refresh();
+      closeConfirm();
+    });
   };
 
   const handleRevert = (id) => {
-    if (!window.confirm('Revert this tournament to previous status?')) return;
-    revertStatus(id);
+    confirm('Revert Status', 'Revert this tournament to previous status?', () => {
+      revertStatus(id);
+      refresh();
+      closeConfirm();
+    });
+  };
+
+  const handleDuplicate = (id) => {
+    const dup = duplicateTournament(id);
+    if (dup) showToast(`Duplicated as "${dup.name}"`);
     refresh();
+  };
+
+  const handleExport = (id) => {
+    const md = exportTournamentAsMarkdown(id);
+    if (!md) return;
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tournament-${id}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exported as Markdown');
   };
 
   const openEdit = (t) => {
@@ -669,9 +1077,25 @@ function TournamentListTab({ statusFilter, setTab }) {
     setEditSaved(false);
   };
 
-  const closeEdit = () => { setEditingId(null); setEditForm(null); setEditErrors([]); };
+  const closeEdit = () => { setEditingId(null); setEditForm(null); setEditErrors([]); if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current); };
 
-  const ef = (key, val) => setEditForm(prev => ({ ...prev, [key]: val }));
+  const ef = (key, val) => {
+    setEditForm(prev => ({ ...prev, [key]: val }));
+    // Auto-save with 2s debounce
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      setEditForm(current => {
+        if (current && editingId) {
+          const validation = validateTournament(current);
+          if (validation.valid) {
+            updateTournament(editingId, current);
+            showToast('Auto-saved');
+          }
+        }
+        return current;
+      });
+    }, 2000);
+  };
 
   // ─── Stage management helpers ───
   const addStage = () => ef('stages', [...(editForm.stages || []), { name: '', type: 'br_points', dateRange: '', teamsInStage: 0, qualificationRule: '' }]);
@@ -829,6 +1253,11 @@ function TournamentListTab({ statusFilter, setTab }) {
                     {statusFilter === 'completed' && (
                       <button onClick={() => handleRevert(t.id)} className="px-3 py-1.5 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg transition font-semibold">Revert to Live</button>
                     )}
+                    <button onClick={() => handleDuplicate(t.id)} className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg transition font-semibold">Duplicate</button>
+                    <button onClick={() => handleExport(t.id)} className="px-3 py-1.5 text-xs bg-upcoming-blue/20 text-upcoming-blue hover:bg-upcoming-blue/30 rounded-lg transition font-semibold">Export</button>
+                    <button onClick={() => setPreviewId(previewId === t.id ? null : t.id)} className="px-3 py-1.5 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded-lg transition font-semibold">
+                      {previewId === t.id ? 'Hide Preview' : 'Preview'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1034,10 +1463,64 @@ function TournamentListTab({ statusFilter, setTab }) {
                   </button>
                 </div>
               )}
+
+              {/* Preview Panel */}
+              {previewId === t.id && !editingId && (
+                <div className="bg-dark border border-accent/20 rounded-xl p-5 mt-2 animate-slide-up">
+                  <p className="text-accent text-xs uppercase tracking-wider font-semibold mb-3">Preview</p>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-white font-heading font-bold text-lg">{t.name}</p>
+                    <p className="text-grey text-xs">{t.organizer} — {t.gameMode} — {t.tier}-Tier — {t.region}</p>
+                    <p className="text-grey text-xs">{t.startDate || '—'} to {t.endDate || '—'} — {t.teamsCount} teams</p>
+                    {(t.prizePoolINR > 0 || t.prizePoolUSD > 0) && (
+                      <p className="text-accent text-xs">
+                        {t.prizePoolINR > 0 && `₹${t.prizePoolINR.toLocaleString('en-IN')}`}
+                        {t.prizePoolINR > 0 && t.prizePoolUSD > 0 && ' / '}
+                        {t.prizePoolUSD > 0 && `$${t.prizePoolUSD.toLocaleString()}`}
+                      </p>
+                    )}
+                    {t.godlikeFinalPosition && <p className="text-accent font-semibold text-xs">GodLike Position: {t.godlikeFinalPosition}</p>}
+                    {t.standings && t.standings.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-grey text-[10px] uppercase tracking-wider mb-1">Top Standings</p>
+                        {t.standings.slice(0, 5).map((r, i) => (
+                          <p key={i} className={`text-xs ${r.isGodlike || (r.team && r.team.toLowerCase().includes('godl')) ? 'text-accent font-bold' : 'text-grey'}`}>
+                            #{r.rank || i + 1} {r.team} — {r.points || 0} pts
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {t.stages && t.stages.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-grey text-[10px] uppercase tracking-wider mb-1">Stages</p>
+                        {t.stages.map((s, i) => (
+                          <p key={i} className="text-grey text-xs">{s.name || `Stage ${i + 1}`} — {(s.matches || []).length} BR matches, {(s.csMatches || []).length} CS matches</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 bg-win/90 text-white px-4 py-2 rounded-lg text-sm font-semibold animate-slide-up">
+          {toast}
+        </div>
+      )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 }
@@ -1048,7 +1531,9 @@ const TABS = [
   { id: 'create-tournament', label: 'Create', group: 'tournaments' },
   { id: 'upcoming', label: 'Upcoming', group: 'tournaments' },
   { id: 'live-tournaments', label: 'Live', group: 'tournaments' },
+  { id: 'live-control', label: 'Live Control', group: 'tournaments' },
   { id: 'completed', label: 'Completed', group: 'tournaments' },
+  { id: 'analytics', label: 'Analytics', group: 'tournaments' },
   { id: 'matches', label: 'Matches', group: 'legacy' },
   { id: 'live', label: 'Live Updater', group: 'legacy' },
   { id: 'players', label: 'Players', group: 'legacy' },
@@ -1060,6 +1545,39 @@ export default function Admin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [tab, setTab] = useState('overview');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [activityLog, setActivityLog] = useState([]);
+  const [showActivityLog, setShowActivityLog] = useState(false);
+
+  // Poll activity log
+  useEffect(() => {
+    if (!authed) return;
+    const poll = () => setActivityLog(getActivityLog().slice(0, 10));
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
+  }, [authed]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    if (!authed) return;
+    const handler = (e) => {
+      const isMeta = e.metaKey || e.ctrlKey;
+      if (isMeta && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo()) { undo(); setRefreshKey(k => k + 1); }
+      }
+      if (isMeta && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        if (canRedo()) { redo(); setRefreshKey(k => k + 1); }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [authed]);
+
+  const handleUndo = () => { if (canUndo()) { undo(); setRefreshKey(k => k + 1); } };
+  const handleRedo = () => { if (canRedo()) { redo(); setRefreshKey(k => k + 1); } };
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -1111,9 +1629,30 @@ export default function Admin() {
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="max-w-7xl mx-auto px-4">
-        <h1 className="font-heading font-bold text-4xl sm:text-5xl text-white uppercase tracking-wider mb-8">
-          Admin <span className="text-accent">Dashboard</span>
-        </h1>
+        {/* Header with Undo/Redo */}
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+          <h1 className="font-heading font-bold text-4xl sm:text-5xl text-white uppercase tracking-wider">
+            Admin <span className="text-accent">Dashboard</span>
+          </h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={!canUndo()}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${canUndo() ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/5 text-grey/50 cursor-not-allowed'}`}
+              title="Undo (Ctrl+Z)"
+            >Undo</button>
+            <button
+              onClick={handleRedo}
+              disabled={!canRedo()}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${canRedo() ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white/5 text-grey/50 cursor-not-allowed'}`}
+              title="Redo (Ctrl+Shift+Z)"
+            >Redo</button>
+            <button
+              onClick={() => setShowActivityLog(!showActivityLog)}
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${showActivityLog ? 'bg-accent text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            >Activity</button>
+          </div>
+        </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
@@ -1161,16 +1700,42 @@ export default function Admin() {
                   {t.label}
                 </button>
               ))}
+
+              {/* Activity Log in Sidebar */}
+              {showActivityLog && (
+                <>
+                  <hr className="border-dark-border my-2" />
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <p className="text-grey text-[10px] uppercase tracking-wider font-bold">Activity</p>
+                    <button onClick={() => { clearActivityLog(); setActivityLog([]); }} className="text-[10px] text-loss hover:text-loss/80 transition">Clear</button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto px-2">
+                    {activityLog.length === 0 ? (
+                      <p className="text-grey text-[10px] px-1 py-1">No activity yet.</p>
+                    ) : (
+                      activityLog.map((entry, i) => (
+                        <div key={i} className="px-1 py-1.5 border-b border-dark-border/30 last:border-0">
+                          <p className="text-white text-[10px] font-semibold truncate">{entry.action}</p>
+                          {entry.details && <p className="text-grey text-[9px] truncate">{entry.details}</p>}
+                          <p className="text-grey/50 text-[9px]">{relativeTime(entry.timestamp)}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 bg-dark-card border border-dark-border rounded-2xl p-5 sm:p-8 min-w-0">
+          <div className="flex-1 bg-dark-card border border-dark-border rounded-2xl p-5 sm:p-8 min-w-0" key={refreshKey}>
             {tab === 'overview' && <OverviewTab setTab={setTab} />}
             {tab === 'create-tournament' && <CreateTournamentTab onCreated={() => setTab('completed')} />}
             {tab === 'upcoming' && <TournamentListTab statusFilter="upcoming" setTab={setTab} />}
             {tab === 'live-tournaments' && <TournamentListTab statusFilter="live" setTab={setTab} />}
+            {tab === 'live-control' && <LiveControlPanelTab />}
             {tab === 'completed' && <TournamentListTab statusFilter="completed" setTab={setTab} />}
+            {tab === 'analytics' && <AnalyticsTab />}
             {tab === 'matches' && <MatchesTab />}
             {tab === 'live' && <LiveUpdaterTab />}
             {tab === 'players' && <PlayersTab />}
