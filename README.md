@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
   <img src="./public/players/GodL%20Logo.png" alt="GodLike Esports Logo" width="300" />
   
@@ -86,3 +87,7 @@ The application will launch by default at **`http://localhost:3000`**.
 <p align="center">
   <i>"We Are India's Golden Army." 🇮🇳</i>
 </p>
+=======
+# GodLike_Live_Tracker
+A high-performance React hub for GodLike Esports starring the Free Fire Roster. Showcases ultra-premium "UI/UX Pro Max" glassmorphic design, live-updating tournament schedulers, deep match analytics, beautiful bento grids, and an integrated Admin panel for real-time score tracking. The sovereign arena to honor India's Golden Army!
+>>>>>>> c04945ac8bbc3dac3fe5a18de076fd678ea6ea40
