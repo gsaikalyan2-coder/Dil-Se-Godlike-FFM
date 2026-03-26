@@ -8,10 +8,11 @@ import Home from './pages/Home';
 import LiveScores from './pages/LiveScores';
 import Roster from './pages/Roster';
 import Schedule from './pages/Schedule';
-import History from './pages/History';
+
 import Admin from './pages/Admin';
 import PlayerProfile from './pages/PlayerProfile';
 import Tournaments from './pages/Tournaments';
+import Heartbreak from './pages/Heartbreak';
 
 // Initialize localStorage with defaults on first load
 initStore();
@@ -28,8 +29,9 @@ export default function App() {
             <Route path="/live" element={<LiveScores />} />
             <Route path="/roster" element={<Roster />} />
             <Route path="/schedule" element={<Schedule />} />
-            <Route path="/history" element={<History />} />
+
             <Route path="/tournaments" element={<Tournaments />} />
+            <Route path="/heartbreak" element={<Heartbreak />} />
             <Route path="/player/:id" element={<PlayerProfile />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>

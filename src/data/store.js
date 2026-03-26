@@ -2,6 +2,7 @@ const KEYS = {
   MATCHES: 'glffm_matches',
   PLAYERS: 'glffm_players',
   SETTINGS: 'glffm_settings',
+  SCHEDULE: 'glffm_schedule',
 };
 
 const DEFAULT_MATCHES = [
@@ -70,7 +71,7 @@ const DEFAULT_PLAYERS = [
 const DEFAULT_SETTINGS = {
   site_title: 'GodLike FFM',
   team_name: 'GodLike FFM',
-  admin_password: 'admin123',
+  admin_password: 'Hush$6969',
   instagram: '',
   youtube: '',
   twitter: '',
@@ -91,7 +92,16 @@ function setJSON(key, value) {
 export function initStore() {
   if (!localStorage.getItem(KEYS.MATCHES)) setJSON(KEYS.MATCHES, DEFAULT_MATCHES);
   if (!localStorage.getItem(KEYS.PLAYERS)) setJSON(KEYS.PLAYERS, DEFAULT_PLAYERS);
-  if (!localStorage.getItem(KEYS.SETTINGS)) setJSON(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  
+  if (!localStorage.getItem(KEYS.SETTINGS)) {
+    setJSON(KEYS.SETTINGS, DEFAULT_SETTINGS);
+  } else {
+    const currentSettings = getJSON(KEYS.SETTINGS, DEFAULT_SETTINGS);
+    if (currentSettings.admin_password === 'admin123') {
+      currentSettings.admin_password = 'Hush$6969';
+      setJSON(KEYS.SETTINGS, currentSettings);
+    }
+  }
 }
 
 // Matches
@@ -173,4 +183,26 @@ export function getSettings() {
 }
 export function saveSettings(settings) {
   setJSON(KEYS.SETTINGS, settings);
+}
+
+// Schedule
+// Each entry: { id, date (YYYY-MM-DD), tournaments: [{ tournamentId, name, time, notes }] }
+export function getScheduleEntries() {
+  return getJSON(KEYS.SCHEDULE, []);
+}
+export function saveScheduleEntries(entries) {
+  setJSON(KEYS.SCHEDULE, entries);
+}
+export function addScheduleEntry(entry) {
+  const entries = getScheduleEntries();
+  entry.id = 'sched_' + Date.now();
+  entries.push(entry);
+  saveScheduleEntries(entries);
+  return entry;
+}
+export function updateScheduleEntry(id, data) {
+  saveScheduleEntries(getScheduleEntries().map(e => (e.id === id ? { ...e, ...data } : e)));
+}
+export function deleteScheduleEntry(id) {
+  saveScheduleEntries(getScheduleEntries().filter(e => e.id !== id));
 }

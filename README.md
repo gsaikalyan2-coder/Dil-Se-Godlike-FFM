@@ -1,70 +1,88 @@
-# Getting Started with Create React App
+<div align="center">
+  <img src="./public/players/GodL%20Logo.png" alt="GodLike Esports Logo" width="300" />
+  
+  # GodLike Free Fire Esports Hub
+  
+  **The Sovereign Arena: India's Golden Army**
+</div>
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+---
 
-## Available Scripts
+A state-of-the-art, dynamic React web application designed exclusively for **GodLike Esports' Free Fire Roster**. This platform serves as a modern esports hub connecting fans with live tournament schedules, deep player analytics, historical results, and the monumental legacy of GodLike's Free Fire team.
 
-In the project directory, you can run:
+Built around a premium **"UI/UX Pro Max"** design philosophy, the interface leverages glassmorphism, volumetric glows, and buttery-smooth interactions to match the prestige of the roster it represents.
 
-### `npm start`
+## 🌟 Key Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 🏆 1. The Sovereign Schedule (Tournament Hub)
+- **Live Event Awareness:** Automatically bumps live matches to a hero banner, complete with pulsing UI and active match indicators.
+- **Dynamic Boto Grids:** Upcoming and Agenda fixtures are rendered in beautiful volumetric bento-box layouts.
+- **Auto-Fallback to Results:** When no upcoming tournaments are scheduled, the grid instantly falls back to a seamless "**Recent Results**" showcase.
+- **Deep Historical Stats:** Every completed tournament card expands smoothly to reveal aggregated squad kills, booyahs, and placement totals.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 👑 2. Roster Showcase
+- **Player Profiles:** Detailed cards for Yogi, Nancy, EcoEco, Nobita, and Marco.
+- **Animated Compositions:** Cinematic "floating" player renders on the homepage simulating a virtual physical stage setup using Tiranga (Saffron, White, Green) accent lights. 
 
-### `npm test`
+### ⚙️ 3. Intelligent Admin Control Panel
+- **Frictionless Score Updates:** End-to-end match entry interface. Fill out placement points and total team kills to have the database magically compile final standings globally.
+- **Data Persistence:** Relies on robust `localStorage` syncing, mocking a backend database using `useTournamentStoreSync`.
+- **Match Iteration & Lifecycle:** From `Upcoming` -> `Live` -> `Completed`, allowing admins precise control over the timeline.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 🕯️ 4. The Heartbreak Memorial
+- A specialized community space to share support and "Light A Candle" during difficult tournament conclusions, capturing the emotional weight of esports fandom.
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🎨 Design Philosophy: "UI/UX Pro Max"
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Our frontend engineering heavily utilizes cutting-edge UI trends to elevate viewer immersion:
+- **Brutalist-Luxury Layouts:** Mixing heavy, unyielding font weights with incredibly delicate, glassmorphic surface containers.
+- **Volumetric Glowing Boundaries:** Component borders aren't just lines; they are carefully positioned gradient `blur-[80px]` orbs masked behind `overflow-hidden` tags.
+- **Hardware-Accelerated Kinetics:** Deep integration of `translate-y-1`, scale transforms, and cascading animation delays on mounting objects.
+- **Bespoke Typography:** Kerning control (e.g., `tracking-[0.2em]` for labels against `tracking-tighter` headlines) to enforce typographic hierarchy.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+---
 
-### `npm run eject`
+## 💻 Technology Stack
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+* **Frontend Framework:** `React.js` (React Router DOM)
+* **Styling Engine:** `Tailwind CSS` (Customized extensions, custom keyframe overrides)
+* **Charting / Analytics:** `Recharts` (D3.js integration for admin metrics)
+* **State Management:** Reactive Custom Hooks (`useTournamentStoreSync`) wrapping `localStorage`.
+* **Deployment Build:** `Create React App` pipeline.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+---
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🛠️ Project Setup & Installation
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+To run this application locally:
 
-## Learn More
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-username/godlike-ffm.git
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# 2. Navigate to the directory
+cd godlike-ffm
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+# 3. Install dependencies
+npm install
 
-### Code Splitting
+# 4. Start the development server
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+The application will launch by default at **`http://localhost:3000`**.
 
-### Analyzing the Bundle Size
+> **Note on Admin Access:** The `/admin` routes are protected by a static client-side password mechanism (current lock: `Hush$6969`), enabling authorized users to manage live scores.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+### Data Mocking Architecture 
+*This repository operates without a remote database.* It uses a highly developed local JSON store index structured to simulate a NoSQL database hierarchy. Data is synced reactively via a custom polling hook that mimics real-time WebSocket connections purely within the client, making the repository completely portable and easy to demo without cloud setups.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+---
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+<p align="center">
+  <i>"We Are India's Golden Army." 🇮🇳</i>
+</p>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GODLIKE | THE SOVEREIGN ARENA</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-secondary": "#343025",
+                        "surface": "#131313",
+                        "secondary": "#cdc6b6",
+                        "error": "#ffb4ab",
+                        "secondary-container": "#4d493d",
+                        "on-primary": "#3d2e00",
+                        "tertiary-container": "#ff8a7f",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "primary-container": "#c9a84c",
+                        "on-primary-container": "#503d00",
+                        "on-surface": "#e5e2e1",
+                        "surface-tint": "#e6c364",
+                        "surface-dim": "#131313",
+                        "on-secondary-container": "#bfb8a9",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "on-tertiary-fixed": "#410002",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary-container": "#86000a",
+                        "on-tertiary": "#690006",
+                        "outline-variant": "#4d4637",
+                        "inverse-on-surface": "#313030",
+                        "surface-variant": "#353534",
+                        "tertiary-fixed": "#ffdad6",
+                        "on-secondary-fixed-variant": "#4b463b",
+                        "secondary-fixed-dim": "#cdc6b6",
+                        "primary-fixed-dim": "#e6c364",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary-fixed": "#241a00",
+                        "tertiary-fixed-dim": "#ffb4ab",
+                        "secondary-fixed": "#eae2d2",
+                        "on-surface-variant": "#d0c5b2",
+                        "outline": "#99907e",
+                        "on-primary-fixed-variant": "#584400",
+                        "primary": "#e6c364",
+                        "error-container": "#93000a",
+                        "on-error": "#690005",
+                        "background": "#131313",
+                        "on-secondary-fixed": "#1f1b12",
+                        "inverse-primary": "#755b00",
+                        "tertiary": "#ffb4ac",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-fixed": "#ffe08f",
+                        "on-tertiary-fixed-variant": "#93000c"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .glow-sm { text-shadow: 0 0 10px rgba(230, 195, 100, 0.5); }
+        .tonal-shift { background: linear-gradient(to bottom, var(--tw-gradient-from), var(--tw-gradient-to)); }
+        .scan-lines {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+        .skew-x-gold { transform: skewX(-12deg); }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
+<!-- NAVIGATION SHELL -->
+<nav class="fixed top-0 w-full z-50 h-20 bg-[#131313]/80 backdrop-blur-xl flex justify-between items-center px-10 w-full max-w-[1920px] mx-auto shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+<div class="flex items-center gap-4">
+<img class="h-12 w-12 object-contain" data-alt="Geometric minimalist esports shield logo with sharp angles and golden accents representing GodLike" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCM4hrZXkD9BlYBLH5WFAU9ECjOHJibJqOEcxsfPpleYuM71bJelP2DXgDCQ-x89AQBwtluvLwILyBVFnQTT9TRpqs1AHTFQyijyAv9Zx5Og4etOqvazSbLf8fXjYlaKbTbLnyDa5JDUXVuylAbGQGvxtqr8smC_q1JweJBCpp_tqMO9VoV-IUbAoWqhEzL2SwClPVxJhS5vwUhI8_-NO4Eq_v8PQlrZvbaqEwqjLNS0f_gAjbT_YZ92zbbwaRke7FuN5-gGkMZhcLc"/>
+<span class="text-2xl font-black italic tracking-tiled text-[#e6c364] font-['Space_Grotesk'] uppercase tracking-tighter">GODLIKE</span>
+</div>
+<div class="hidden md:flex items-center gap-8 font-['Space_Grotesk'] uppercase tracking-tighter font-bold text-sm">
+<a class="text-[#e6c364] border-b-2 border-[#e6c364] pb-1" href="#">Home</a>
+<a class="text-[#e5e2e1] hover:text-[#e6c364] transition-colors" href="#">Schedule</a>
+<a class="text-[#e5e2e1] hover:text-[#e6c364] transition-colors" href="#">Tournaments</a>
+<a class="text-[#e5e2e1] hover:text-[#e6c364] transition-colors" href="#">Roster</a>
+<a class="text-[#e5e2e1] hover:text-[#e6c364] transition-colors" href="#">About</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#e6c364] hover:scale-105 transition-all">sensors</button>
+<button class="bg-primary text-on-primary px-6 py-2 font-headline font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all">Join Army</button>
+</div>
+</nav>
+<main class="relative min-h-screen pt-20">
+<!-- HERO SECTION -->
+<section class="relative h-[921px] flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-60 brightness-50" data-alt="Cinematic high-contrast esports arena background with atmospheric smoke, golden spotlights, and dark industrial textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBf2OJ5ytQkkYACY_-Sx4Z2ZQc67j1d2jWahaLEmQ2Aq-lJa8qXb3JdHsJRz_4-ePS9laBFtPCttMq63h6Q0Wm87W9T3Pobi-p3IM5icjM76w7oa5ovItJsaXWgexwUMwuhMtZU5R7p6eUMBTzzGfRIvnBPcPnUt4orWSCPYNyUmBAw1J3eHfl0HH7Z-NPV-lPdDn1afLE6_4Vgs_mtZTUMtVftg_9PiDGCLDI3Qia9SEMSmuN919lEjvrar1hWWt3rTebtJ-N-MKqI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+</div>
+<div class="scan-lines absolute inset-0 z-10"></div>
+<div class="relative z-20 text-center px-6 max-w-6xl mx-auto">
+<h2 class="text-primary font-headline font-bold text-xl tracking-[0.5em] mb-4 opacity-80 uppercase">For The Golden Army</h2>
+<h1 class="font-headline font-extrabold text-6xl md:text-9xl leading-none tracking-tighter mb-8 italic">
+<span class="text-primary block">ULTIMATE</span>
+<span class="text-on-surface block">ESPORTS</span>
+<span class="text-on-surface/80 block">EXPERIENCE</span>
+</h1>
+<div class="flex flex-col md:flex-row gap-6 justify-center mt-12">
+<button class="bg-primary text-on-primary px-10 py-4 font-headline font-black uppercase tracking-widest text-lg skew-x-gold hover:brightness-110 transition-all">
+<span class="inline-block skew-x-[12deg]">Watch Live</span>
+</button>
+<button class="border border-primary/40 text-primary px-10 py-4 font-headline font-black uppercase tracking-widest text-lg hover:bg-primary/10 transition-all">
+                        View Schedule
+                    </button>
+</div>
+</div>
+<!-- ASYMMETRIC STAT OVERLAY -->
+<div class="absolute bottom-10 left-10 hidden lg:block border-l-2 border-primary pl-6 py-2">
+<p class="font-label text-primary/60 text-xs uppercase tracking-widest mb-1">Win Rate</p>
+<p class="font-headline font-bold text-4xl text-on-surface">84.2%</p>
+</div>
+</section>
+<!-- LIVE NOW BANNER -->
+<section class="bg-surface-container-lowest py-4 border-y border-outline-variant/10 overflow-hidden relative">
+<div class="flex items-center justify-center gap-8 whitespace-nowrap animate-pulse">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 bg-tertiary rounded-full shadow-[0_0_10px_#ffb4ac]"></span>
+<span class="font-headline font-bold text-tertiary uppercase tracking-widest text-sm">Live Now</span>
+</div>
+<p class="font-headline font-medium text-on-surface uppercase tracking-tighter text-lg">PMPL South Asia Finals: GodLike vs Team Soul • Map 4: Erangel</p>
+<div class="hidden md:flex items-center gap-4">
+<span class="text-primary/40">|</span>
+<p class="font-headline text-on-surface/60 uppercase tracking-widest text-sm">Viewers: 42.1K</p>
+</div>
+</div>
+</section>
+<!-- RECENT RESULTS & UPCOMING ARENAS (BENTO GRID) -->
+<section class="px-10 py-24 max-w-[1920px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- RECENT RESULTS -->
+<div class="lg:col-span-4 space-y-6">
+<div class="flex items-baseline justify-between mb-8">
+<h3 class="font-headline font-black text-3xl uppercase tracking-tighter italic border-b-4 border-primary pb-2">Recent Combat</h3>
+<span class="font-label text-primary/40 text-xs uppercase tracking-[0.3em]">Season 2026</span>
+</div>
+<div class="space-y-4">
+<!-- Match Card 1 -->
+<div class="bg-surface-container-low p-6 flex items-center justify-between border-r-4 border-primary hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-6">
+<div class="text-center">
+<p class="font-headline font-black text-2xl text-primary">2</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">GL</p>
+</div>
+<div class="text-on-surface/20 font-headline font-light text-xl italic">VS</div>
+<div class="text-center">
+<p class="font-headline font-black text-2xl text-on-surface/60 group-hover:text-on-surface transition-colors">0</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">OR</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-sm uppercase text-on-surface">BMPS Pro League</p>
+<span class="inline-block mt-2 px-3 py-1 bg-primary/10 text-primary font-label text-[10px] uppercase tracking-widest">Victory</span>
+</div>
+</div>
+<!-- Match Card 2 -->
+<div class="bg-surface-container-low p-6 flex items-center justify-between border-r-4 border-on-surface/10 hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-6">
+<div class="text-center">
+<p class="font-headline font-black text-2xl text-on-surface/60">1</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">GL</p>
+</div>
+<div class="text-on-surface/20 font-headline font-light text-xl italic">VS</div>
+<div class="text-center">
+<p class="font-headline font-black text-2xl text-on-surface/60">1</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">TX</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-sm uppercase text-on-surface">CODM World Cup</p>
+<span class="inline-block mt-2 px-3 py-1 bg-surface-container-highest text-on-surface/40 font-label text-[10px] uppercase tracking-widest">Draw</span>
+</div>
+</div>
+<!-- Match Card 3 -->
+<div class="bg-surface-container-low p-6 flex items-center justify-between border-r-4 border-primary hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-6">
+<div class="text-center">
+<p class="font-headline font-black text-2xl text-primary">3</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">GL</p>
+</div>
+<div class="text-on-surface/20 font-headline font-light text-xl italic">VS</div>
+<div class="text-center">
+<p class="font-headline font-black text-2xl text-on-surface/60 group-hover:text-on-surface transition-colors">1</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">TS</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-sm uppercase text-on-surface">Skyesports Masters</p>
+<span class="inline-block mt-2 px-3 py-1 bg-primary/10 text-primary font-label text-[10px] uppercase tracking-widest">Victory</span>
+</div>
+</div>
+</div>
+</div>
+<!-- UPCOMING ARENAS -->
+<div class="lg:col-span-8">
+<div class="flex items-baseline justify-between mb-8">
+<h3 class="font-headline font-black text-3xl uppercase tracking-tighter italic border-b-4 border-on-surface pb-2">Upcoming Arenas</h3>
+<div class="flex gap-2">
+<button class="w-10 h-10 border border-outline-variant/30 flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 border border-outline-variant/30 flex items-center justify-center hover:bg-primary hover:text-on-primary transition-all">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Tournament Card 1 -->
+<div class="group relative bg-surface-container-low overflow-hidden border-t-2 border-primary/20">
+<div class="aspect-video relative overflow-hidden">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" data-alt="Abstract dynamic geometric composition with neon glow and high-tech esports arena motifs for a major gaming tournament" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcONaqJW6VFyQ-BbT_vcdbHCVrCo_nPHCdKLizmD9SaHX0a9ckrMapnAHqZEMjj7ez1Nvruc9MtzSuATjaHIn2azUOQtaGgwhPmEg6uREkrhTjPfcX233uyBqNTukBLPDLhFlZnBWvDi8T385m84uGCWYcwGfH2itsottJZ40kov3vFBbJ7X3TiA_uA6Y9bH7vF7i4KxaJTl4rDOHH7_oR4L4uIlZ74ETL5lENBBwkNcCDK7Dzqc42Z6c77PQOrly_J6DQ5RsW0WAP"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-transparent to-transparent"></div>
+<div class="absolute top-4 left-4 bg-primary text-on-primary font-label font-bold text-[10px] px-3 py-1 uppercase tracking-widest shadow-xl">Global Elite</div>
+</div>
+<div class="p-8">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h4 class="font-headline font-black text-2xl uppercase tracking-tighter leading-none mb-2">BMPS Series 2026</h4>
+<p class="font-label text-xs text-primary/60 uppercase tracking-widest">New Delhi, India</p>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-xl text-on-surface">$2,000,000</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">Prize Pool</p>
+</div>
+</div>
+<div class="flex items-center justify-between border-t border-outline-variant/10 pt-6">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm">calendar_today</span>
+<span class="font-label text-xs uppercase text-on-surface/60">Oct 14 - Oct 28</span>
+</div>
+<button class="font-headline font-bold text-xs uppercase tracking-widest text-primary flex items-center gap-2 group-hover:gap-4 transition-all">
+                                    Full Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Tournament Card 2 -->
+<div class="group relative bg-surface-container-low overflow-hidden border-t-2 border-primary/20">
+<div class="aspect-video relative overflow-hidden">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110" data-alt="Futuristic esports arena visualization with deep red and gold lighting, sharp architectural lines and digital display panels" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD43xcHWBFwb97MhlV9ixYIvLBXfMnPpqvR6ZEAYQvlnaZmRa3zkzWsKjimmx_cgQJDsHXytYf9LuPIDMaOyL-QtylckmqzxXo_X_-j2t27LHTZ5xz7JG1g2EL_TztJYSgMa6dmDSQaVJrjWq7zn_zPHnxvCd5HOFOnFOJownnTsxGq0MAoiuWsfHaEMgvMCMRI_-97l9uBkIFjyU7SGM6ObJVqRbMEwucuWWlgR9IHD-SyqCCTHTMDThhX_E_lrvmIDxRDCjLRnPfi"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-transparent to-transparent"></div>
+<div class="absolute top-4 left-4 bg-surface-container-highest text-on-surface/60 font-label font-bold text-[10px] px-3 py-1 uppercase tracking-widest shadow-xl">Regional</div>
+</div>
+<div class="p-8">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h4 class="font-headline font-black text-2xl uppercase tracking-tighter leading-none mb-2">CODM MASTERS</h4>
+<p class="font-label text-xs text-primary/60 uppercase tracking-widest">Online / Mumbai</p>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-xl text-on-surface">$500,000</p>
+<p class="font-label text-[10px] text-on-surface/40 uppercase">Prize Pool</p>
+</div>
+</div>
+<div class="flex items-center justify-between border-t border-outline-variant/10 pt-6">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm">calendar_today</span>
+<span class="font-label text-xs uppercase text-on-surface/60">Nov 05 - Nov 12</span>
+</div>
+<button class="font-headline font-bold text-xs uppercase tracking-widest text-primary flex items-center gap-2 group-hover:gap-4 transition-all">
+                                    Full Details <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA SECTION: THE GOLDEN ARMY -->
+<section class="relative py-32 bg-surface-container-lowest overflow-hidden">
+<div class="absolute inset-0 flex items-center justify-center opacity-5">
+<span class="text-[20rem] font-headline font-black italic tracking-tighter uppercase whitespace-nowrap">GODLIKE</span>
+</div>
+<div class="relative z-10 max-w-4xl mx-auto text-center px-6">
+<h2 class="font-headline font-black text-5xl md:text-7xl uppercase italic tracking-tighter mb-6">BECOME A PART OF <span class="text-primary">THE LEGACY</span></h2>
+<p class="font-body text-xl text-on-surface/60 mb-12 max-w-2xl mx-auto">Join the most dominant force in South Asian esports. Exclusive content, early access merchandise, and community events.</p>
+<div class="flex flex-wrap justify-center gap-4">
+<button class="bg-primary text-on-primary px-12 py-5 font-headline font-black uppercase tracking-widest text-xl hover:scale-105 transition-transform">Enlist Now</button>
+<button class="border border-primary text-primary px-12 py-5 font-headline font-black uppercase tracking-widest text-xl hover:bg-primary hover:text-on-primary transition-all">Shop Merch</button>
+</div>
+</div>
+</section>
+</main>
+<!-- FOOTER -->
+<footer class="bg-[#0e0e0e] w-full py-12 border-t border-[#e6c364]/10 flex flex-col md:flex-row justify-between items-center px-12 w-full">
+<div class="flex flex-col items-center md:items-start gap-4 mb-8 md:mb-0">
+<div class="flex items-center gap-3">
+<img class="h-6 w-6" data-alt="Small GodLike shield icon for footer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCD2c1yNQ3mQo1fmxlZPKWOEBkBgHhd_af1FtNq3cQnMLk1K7cVUt4GFiZBztF-fueBlKJXdAmgNwMtysuXaRtMTVytnvA9vAZcOLpUo_0FJIleNHNwDQGKwB8dNTu1Fl5mqWy31w-4TMTrqqLfP53E3pLKYRBl3hdY0bHaoiO8LmypJcps_kpPUcm8FJG9wC75ixW-dgI16yfcrz_GSFHrREZ946vpbl9qalmAQj1FwrOtw2t-kqk0fpTIbxwlKk6bQ-PX80HGbfmk"/>
+<span class="text-xl font-bold text-[#e6c364] font-['Space_Grotesk'] uppercase">GODLIKE ESPORTS</span>
+</div>
+<p class="font-['Space_Grotesk'] text-xs tracking-widest uppercase text-[#e5e2e1]/60">© 2026 GodLike Esports</p>
+</div>
+<div class="flex gap-12 font-['Space_Grotesk'] text-xs tracking-widest uppercase">
+<a class="text-[#e5e2e1]/60 hover:text-[#e6c364] hover:glow-sm transition-transform hover:translate-y-[-2px]" href="#">Discord</a>
+<a class="text-[#e5e2e1]/60 hover:text-[#e6c364] hover:glow-sm transition-transform hover:translate-y-[-2px]" href="#">Instagram</a>
+<a class="text-[#e5e2e1]/60 hover:text-[#e6c364] hover:glow-sm transition-transform hover:translate-y-[-2px]" href="#">X</a>
+<a class="text-[#e5e2e1]/60 hover:text-[#e6c364] hover:glow-sm transition-transform hover:translate-y-[-2px]" href="#">YouTube</a>
+</div>
+<div class="mt-8 md:mt-0 flex flex-col items-center md:items-end gap-2">
+<p class="font-label text-[10px] text-on-surface/40 uppercase tracking-widest">Designed for champions</p>
+<div class="flex gap-4">
+<span class="w-10 h-1 bg-primary"></span>
+<span class="w-10 h-1 bg-surface-container-highest"></span>
+<span class="w-10 h-1 bg-surface-container-highest"></span>
+</div>
+</div>
+</footer>
+</body></html>

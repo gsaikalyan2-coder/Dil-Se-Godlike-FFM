@@ -58,7 +58,35 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid #2a2a2a;
 }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 .live-tournament-glow {
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.2), 0 0 30px rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ── Heartbreak memorial animations ── */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; transform: scale(1.1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+@keyframes candleFlicker {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+  25% { transform: scale(1.05) rotate(-1deg); filter: brightness(1.2); }
+  50% { transform: scale(0.98) rotate(1deg); filter: brightness(0.95); }
+  75% { transform: scale(1.03) rotate(-0.5deg); filter: brightness(1.1); }
+}
+.candle-lit {
+  animation: candleFlicker 2s ease-in-out infinite;
+}
+
+.heartbreak-page {
+  --hb-gold: #c9a84c;
+  --hb-bg: #0a0a0a;
+  --hb-text: #e8e0d0;
 }

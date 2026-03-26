@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "stitch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "stitch-mcp"
+      ],
+      "env": {
+        "GOOGLE_CLOUD_PROJECT": "godlike-ffm-stitch",
+        "STITCH_API_KEY": "AQ.Ab8RN6LVlKV78B3FoNgzC5yoh0K_5RhCU0EmCIOGYEQ_YvGA-A"
+      }
+    }
+  }
+}

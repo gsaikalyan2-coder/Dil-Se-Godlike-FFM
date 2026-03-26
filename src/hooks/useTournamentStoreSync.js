@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getTournamentsByStatus, getAllTournaments } from '../data/tournamentStore';
+import { getScheduleEntries } from '../data/store';
 
 /**
  * Syncs with tournamentStore via storage events (cross-tab) + polling (same-tab).
@@ -64,4 +65,28 @@ export function useAllTournaments() {
   }, [refresh]);
 
   return { tournaments, refresh };
+}
+
+/**
+ * Syncs schedule entries from store.js via polling + storage events.
+ */
+export function useScheduleSync() {
+  const fetchEntries = useCallback(() => getScheduleEntries(), []);
+  const [entries, setEntries] = useState(fetchEntries);
+
+  const refresh = useCallback(() => setEntries(fetchEntries()), [fetchEntries]);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'glffm_schedule') refresh();
+    };
+    window.addEventListener('storage', onStorage);
+    const interval = setInterval(refresh, 5000);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      clearInterval(interval);
+    };
+  }, [refresh]);
+
+  return { entries, refresh };
 }

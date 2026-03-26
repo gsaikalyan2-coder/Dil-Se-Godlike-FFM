@@ -3,6 +3,7 @@ import {
   getMatches, addMatch, updateMatch, deleteMatch, setLiveMatch,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
   getSettings, saveSettings, getLiveMatch,
+  getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry,
 } from '../data/store';
 import {
   getAllTournaments, getTournamentsByStatus, getTournamentIndex,
@@ -531,18 +532,26 @@ function LiveControlPanelTab() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
-  // Quick add match to the last stage
+  // Quick add match to the last stage (auto-creates a default stage if none exist)
   const addQuickMatch = (placement, kills, booyah, playerKills) => {
-    if (!tournament || !tournament.stages || tournament.stages.length === 0) return;
-    const stages = [...tournament.stages];
+    if (!tournament) return;
+    let stages = [...(tournament.stages || [])];
+    // Auto-create a default stage if tournament has none
+    if (stages.length === 0) {
+      stages = [{ name: 'Day 1', type: 'br_points', matches: [] }];
+      updateTournament(selectedId, { stages });
+    }
     const lastStage = { ...stages[stages.length - 1] };
     const matches = [...(lastStage.matches || [])];
+    const rosterFallback = (tournament.playingFour?.length > 0 ? tournament.playingFour : (tournament.roster || ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY']));
+    const defaultPK = rosterFallback.reduce((acc, p) => ({ ...acc, [p]: 0 }), {});
     matches.push({
       matchNum: matches.length + 1,
       placement: placement || 0,
       kills: kills || 0,
       booyah: booyah || false,
-      playerKills: playerKills || { YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 },
+      playerKills: playerKills || defaultPK,
+      map: '',
     });
     lastStage.matches = matches;
     stages[stages.length - 1] = lastStage;
@@ -559,11 +568,20 @@ function LiveControlPanelTab() {
     refresh();
   };
 
+  // Derive active roster from tournament
+  const activeRoster = tournament?.playingFour?.length > 0 ? tournament.playingFour : (tournament?.roster || ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY']);
+  const buildEmptyPK = (roster) => roster.reduce((acc, p) => ({ ...acc, [p]: 0 }), {});
+
   // Quick entry state
   const [qPlacement, setQPlacement] = useState(0);
   const [qKills, setQKills] = useState(0);
   const [qBooyah, setQBooyah] = useState(false);
-  const [qPlayerKills, setQPlayerKills] = useState({ YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 });
+  const [qPlayerKills, setQPlayerKills] = useState(() => buildEmptyPK(activeRoster));
+
+  // Reset qPlayerKills when tournament changes
+  useEffect(() => {
+    setQPlayerKills(buildEmptyPK(activeRoster));
+  }, [tournament?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalPlayerKills = Object.values(qPlayerKills).reduce((a, b) => a + b, 0);
   const killMismatch = qKills > 0 && totalPlayerKills > 0 && totalPlayerKills !== qKills;
@@ -571,7 +589,7 @@ function LiveControlPanelTab() {
   const handleSaveMatch = () => {
     addQuickMatch(qPlacement, qKills, qBooyah, { ...qPlayerKills });
     setQPlacement(0); setQKills(0); setQBooyah(false);
-    setQPlayerKills({ YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 });
+    setQPlayerKills(buildEmptyPK(activeRoster));
   };
 
   const autoSummary = tournament ? computeAutoStandings(tournament) : null;
@@ -623,7 +641,7 @@ function LiveControlPanelTab() {
               <div className="bg-dark-card border border-dark-border rounded-xl p-5">
                 <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Quick Score Entry</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
-                  <Input label="Placement (1-18)" type="number" value={qPlacement} onChange={e => setQPlacement(Math.min(18, Math.max(0, +e.target.value)))} />
+                  <Input label="Placement Points" type="number" value={qPlacement} onChange={e => setQPlacement(Math.max(0, +e.target.value))} />
                   <Input label="Total Kills" type="number" value={qKills} onChange={e => setQKills(Math.max(0, +e.target.value))} />
                   <div className="flex items-end gap-2">
                     <label className="text-grey text-xs">Booyah</label>
@@ -638,14 +656,14 @@ function LiveControlPanelTab() {
 
                 {/* Per-player kills */}
                 <p className="text-grey text-[10px] uppercase tracking-wider mb-2">Player Kills</p>
-                <div className="grid grid-cols-5 gap-2 mb-3">
-                  {['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'].map(p => (
+                <div className={`grid gap-2 mb-3`} style={{ gridTemplateColumns: `repeat(${activeRoster.length}, minmax(0, 1fr))` }}>
+                  {activeRoster.map(p => (
                     <div key={p} className="text-center">
                       <p className="text-grey text-[9px] mb-1">{p}</p>
                       <div className="flex items-center justify-center gap-1">
                         <input
                           type="number"
-                          value={qPlayerKills[p]}
+                          value={qPlayerKills[p] || 0}
                           onChange={e => setQPlayerKills(prev => ({ ...prev, [p]: Math.max(0, +e.target.value) }))}
                           className="w-10 bg-dark border border-dark-border rounded text-white text-center text-xs py-1"
                         />
@@ -692,6 +710,58 @@ function LiveControlPanelTab() {
                   </div>
                 )}
               </div>
+
+              {/* Saved Matches History */}
+              {(() => {
+                const allMatches = (tournament.stages || []).flatMap((s, si) =>
+                  (s.matches || []).map((m, mi) => ({ ...m, stageName: s.name || `Stage ${si + 1}`, stageIdx: si, matchIdx: mi }))
+                );
+                if (allMatches.length === 0) return null;
+                return (
+                  <div className="bg-dark border border-dark-border rounded-xl p-4">
+                    <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-4">Match History ({allMatches.length} matches)</p>
+                    <div className="space-y-2">
+                      {allMatches.map((m, i) => {
+                        const placementPts = Number(m.placement) || 0;
+                        const matchPts = placementPts + (m.kills || 0);
+                        const playerKillEntries = Object.entries(m.playerKills || {}).filter(([, v]) => v > 0);
+                        return (
+                          <div key={i} className="bg-dark-card border border-dark-border/50 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-accent text-[10px] font-bold">Match {m.matchNum || i + 1}</span>
+                                <span className="text-grey text-[10px]">{m.stageName}</span>
+                                {m.map && <span className="text-grey text-[10px]">| {m.map}</span>}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {m.booyah && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-accent/20 text-accent">BOOYAH!</span>}
+                                <span className="text-white font-heading font-bold text-sm">{matchPts} pts</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-1">
+                                <span className="text-grey text-[10px]">Placement Pts:</span>
+                                <span className="text-white text-xs font-semibold">{placementPts}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-grey text-[10px]">Kills:</span>
+                                <span className="text-white text-xs font-semibold">{m.kills || 0}</span>
+                              </div>
+                            </div>
+                            {playerKillEntries.length > 0 && (
+                              <div className="flex gap-3 mt-1.5 flex-wrap">
+                                {playerKillEntries.map(([p, k]) => (
+                                  <span key={p} className="text-[10px]"><span className="text-grey">{p}:</span> <span className="text-white font-semibold">{k}</span></span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </>
@@ -954,8 +1024,8 @@ function CreateTournamentTab({ onCreated }) {
         <Select label="Status *" options={TOURNAMENT_STATUS_OPTIONS} value={form.status} onChange={e => f('status', e.target.value)} />
         <Input label="Start Date *" type="date" value={form.startDate} onChange={e => f('startDate', e.target.value)} />
         <Input label="End Date *" type="date" value={form.endDate} onChange={e => f('endDate', e.target.value)} />
-        <Input label="Prize Pool (INR)" type="number" value={form.prizePoolINR} onChange={e => f('prizePoolINR', +e.target.value)} />
-        <Input label="Prize Pool (USD)" type="number" value={form.prizePoolUSD} onChange={e => f('prizePoolUSD', +e.target.value)} />
+        <Input label="Prize Pool (INR)" type="number" value={form.prizePoolINR} onChange={e => f('prizePoolINR', e.target.value === '' ? '' : +e.target.value)} />
+        <Input label="Prize Pool (USD)" type="number" value={form.prizePoolUSD} onChange={e => f('prizePoolUSD', e.target.value === '' ? '' : +e.target.value)} />
         <Input label="Teams Count *" type="number" value={form.teamsCount} onChange={e => f('teamsCount', +e.target.value)} />
         <Input label="Liquipedia URL" value={form.liquipediaURL} onChange={e => f('liquipediaURL', e.target.value)} placeholder="https://liquipedia.net/..." />
         <Input label="Instagram Link" value={form.instagramURL} onChange={e => f('instagramURL', e.target.value)} placeholder="https://instagram.com/..." />
@@ -1072,7 +1142,7 @@ function TournamentListTab({ statusFilter, setTab }) {
 
   const openEdit = (t) => {
     setEditingId(t.id);
-    setEditForm({ ...t });
+    setEditForm({ ...t, playingFour: t.playingFour || [] });
     setEditErrors([]);
     setEditSaved(false);
   };
@@ -1106,7 +1176,9 @@ function TournamentListTab({ statusFilter, setTab }) {
   const addBRMatch = (stageIdx) => {
     const stages = [...(editForm.stages || [])];
     const stage = { ...stages[stageIdx] };
-    stage.matches = [...(stage.matches || []), { matchNum: (stage.matches || []).length + 1, placement: 0, kills: 0, playerKills: { YOGI: 0, MARCO: 0, NOBITA: 0, ECOECO: 0, NANCY: 0 }, booyah: false }];
+    const activeRoster = editForm.playingFour?.length > 0 ? editForm.playingFour : (editForm.roster || []);
+    const playerKills = activeRoster.reduce((acc, p) => ({ ...acc, [p]: 0 }), {});
+    stage.matches = [...(stage.matches || []), { matchNum: (stage.matches || []).length + 1, placement: 0, kills: 0, playerKills, booyah: false, map: '' }];
     stages[stageIdx] = stage;
     ef('stages', stages);
   };
@@ -1287,10 +1359,38 @@ function TournamentListTab({ statusFilter, setTab }) {
                     <Input label="Start Date" type="date" value={editForm.startDate} onChange={e => ef('startDate', e.target.value)} />
                     <Input label="End Date" type="date" value={editForm.endDate} onChange={e => ef('endDate', e.target.value)} />
                     <Input label="Teams" type="number" value={editForm.teamsCount} onChange={e => ef('teamsCount', +e.target.value)} />
-                    <Input label="Prize INR" type="number" value={editForm.prizePoolINR} onChange={e => ef('prizePoolINR', +e.target.value)} />
-                    <Input label="Prize USD" type="number" value={editForm.prizePoolUSD} onChange={e => ef('prizePoolUSD', +e.target.value)} />
+                    <Input label="Prize INR" type="number" value={editForm.prizePoolINR} onChange={e => ef('prizePoolINR', e.target.value === '' ? '' : +e.target.value)} />
+                    <Input label="Prize USD" type="number" value={editForm.prizePoolUSD} onChange={e => ef('prizePoolUSD', e.target.value === '' ? '' : +e.target.value)} />
                     <Input label="GodLike Position" value={editForm.godlikeFinalPosition} onChange={e => ef('godlikeFinalPosition', e.target.value)} />
                     <Input label="Liquipedia URL" value={editForm.liquipediaURL || ''} onChange={e => ef('liquipediaURL', e.target.value)} />
+                  </div>
+
+                  {/* Playing 4 Selector */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-grey text-xs uppercase tracking-wider font-semibold">Playing 4</p>
+                      <span className="text-accent text-[10px]">({(editForm.playingFour || []).length}/{(editForm.roster || []).length} selected)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(editForm.roster || []).map(player => {
+                        const isSelected = (editForm.playingFour || []).includes(player);
+                        return (
+                          <button
+                            key={player}
+                            onClick={() => {
+                              if (isSelected) {
+                                ef('playingFour', (editForm.playingFour || []).filter(p => p !== player));
+                              } else {
+                                ef('playingFour', [...(editForm.playingFour || []), player]);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${isSelected ? 'bg-accent/20 border-accent/30 text-accent' : 'bg-dark border-dark-border text-grey hover:text-white'}`}
+                          >
+                            {player}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Stages */}
@@ -1325,7 +1425,8 @@ function TournamentListTab({ statusFilter, setTab }) {
                                   <span className="text-accent text-[10px] font-bold">Match {m.matchNum || mi + 1}</span>
                                   <button onClick={() => removeBRMatch(si, mi)} className="text-[10px] text-loss">Remove</button>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-2">
+                                  <Input label="Map" value={m.map || ''} onChange={e => updateBRMatch(si, mi, 'map', e.target.value)} />
                                   <Input label="Placement (1-18)" type="number" value={m.placement || 0} onChange={e => updateBRMatch(si, mi, 'placement', Math.min(18, Math.max(0, +e.target.value)))} error={m.placement && (m.placement < 1 || m.placement > 18) ? '1-18' : ''} />
                                   <Input label="Kills" type="number" value={m.kills || 0} onChange={e => updateBRMatch(si, mi, 'kills', Math.max(0, +e.target.value))} />
                                   <div className="flex items-end gap-2">
@@ -1338,8 +1439,8 @@ function TournamentListTab({ statusFilter, setTab }) {
                                     </button>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-5 gap-2">
-                                  {['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'].map(p => (
+                                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${(editForm.playingFour?.length > 0 ? editForm.playingFour : editForm.roster || []).length || 5}, minmax(0, 1fr))` }}>
+                                  {(editForm.playingFour?.length > 0 ? editForm.playingFour : editForm.roster || []).map(p => (
                                     <Input key={p} label={p} type="number" value={(m.playerKills || {})[p] || 0} onChange={e => updatePlayerKill(si, mi, p, Math.max(0, +e.target.value))} />
                                   ))}
                                 </div>
@@ -1525,6 +1626,412 @@ function TournamentListTab({ statusFilter, setTab }) {
   );
 }
 
+// =================== SCHEDULE TAB ===================
+const TIME_PRESETS = [
+  { label: '12 PM', value: '12:00' },
+  { label: '2 PM',  value: '14:00' },
+  { label: '4 PM',  value: '16:00' },
+  { label: '6 PM',  value: '18:00' },
+  { label: '8 PM',  value: '20:00' },
+  { label: '9 PM',  value: '21:00' },
+  { label: '10 PM', value: '22:00' },
+  { label: '11 PM', value: '23:00' },
+];
+
+function formatTime12(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+function ScheduleTab() {
+  const [entries, setEntries] = useState(getScheduleEntries());
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [allTournaments, setAllTournaments] = useState([]);
+  const [toast, setToast] = useState('');
+
+  // Quick-add form state
+  const [addTournamentId, setAddTournamentId] = useState('');
+  const [addTime, setAddTime] = useState('20:00');
+  const [addNotes, setAddNotes] = useState('');
+
+  const refresh = useCallback(() => {
+    setEntries(getScheduleEntries());
+    setAllTournaments(getAllTournaments().filter(t => t.status === 'upcoming' || t.status === 'live'));
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
+
+  // Get or create entry for selected date
+  const dateEntry = entries.find(e => e.date === selectedDate);
+  const dateTournaments = dateEntry?.tournaments || [];
+
+  // Sort scheduled tournaments by time for display
+  const sortedDayTournaments = [...dateTournaments]
+    .map((w, origIdx) => ({ ...w, _idx: origIdx }))
+    .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+
+  const handleQuickAdd = () => {
+    if (!addTournamentId) { showToast('Select a tournament first'); return; }
+    if (!addTime) { showToast('Pick a time slot'); return; }
+    const t = allTournaments.find(x => x.id === addTournamentId);
+    if (!t) return;
+    const widget = { tournamentId: t.id, name: t.name, time: addTime, notes: addNotes };
+    if (dateEntry) {
+      updateScheduleEntry(dateEntry.id, { tournaments: [...dateTournaments, widget] });
+    } else {
+      addScheduleEntry({ date: selectedDate, tournaments: [widget] });
+    }
+    showToast(`Scheduled "${t.name}" at ${formatTime12(addTime)}`);
+    setAddTournamentId('');
+    setAddNotes('');
+    refresh();
+  };
+
+  const handleUpdateWidget = (idx, key, val) => {
+    if (!dateEntry) return;
+    const updated = dateTournaments.map((w, i) => i === idx ? { ...w, [key]: val } : w);
+    updateScheduleEntry(dateEntry.id, { tournaments: updated });
+    refresh();
+  };
+
+  const handleRemoveWidget = (idx) => {
+    if (!dateEntry) return;
+    const updated = dateTournaments.filter((_, i) => i !== idx);
+    if (updated.length === 0) {
+      deleteScheduleEntry(dateEntry.id);
+    } else {
+      updateScheduleEntry(dateEntry.id, { tournaments: updated });
+    }
+    showToast('Removed from schedule');
+    refresh();
+  };
+
+  const handleDeleteDay = () => {
+    if (!dateEntry) return;
+    deleteScheduleEntry(dateEntry.id);
+    showToast('Day schedule cleared');
+    refresh();
+  };
+
+  // Get all dates that have entries, sorted
+  const scheduledDates = [...new Set(entries.map(e => e.date))].sort();
+
+  // Tournaments available to add (not already on this day)
+  const availableToAdd = allTournaments.filter(t => !dateTournaments.some(w => w.tournamentId === t.id));
+
+  // Next 7 days quick-pick
+  const next7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+
+  return (
+    <div>
+      <h2 className="font-heading font-bold text-2xl text-white mb-2">Live Schedule Manager</h2>
+      <p className="text-grey text-sm mb-6">Schedule live streams — pick a day, select tournament & time, and it appears in the Agenda.</p>
+
+      {toast && (
+        <div className="fixed top-20 right-6 z-50 bg-win/90 text-white px-4 py-2 rounded-lg text-sm font-semibold animate-slide-up">
+          {toast}
+        </div>
+      )}
+
+      {/* ── Date Selection ── */}
+      <div className="bg-dark border border-dark-border rounded-xl p-4 mb-6">
+        <label className="block text-grey text-xs uppercase tracking-wider font-semibold mb-3">Select Date</label>
+        <div className="flex items-center gap-3 flex-wrap">
+          {next7Days.map(d => {
+            const isToday = d === new Date().toISOString().slice(0, 10);
+            const hasEntries = entries.some(e => e.date === d && e.tournaments?.length > 0);
+            return (
+              <button
+                key={d}
+                onClick={() => setSelectedDate(d)}
+                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  d === selectedDate
+                    ? 'bg-accent text-dark ring-2 ring-accent/40 shadow-lg shadow-accent/20'
+                    : 'bg-dark-card border border-dark-border text-grey hover:text-white hover:border-accent/30'
+                }`}
+              >
+                <span className="block text-[10px] uppercase tracking-wider opacity-70">
+                  {isToday ? 'Today' : new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
+                </span>
+                <span className="block text-sm mt-0.5">
+                  {new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                </span>
+                {hasEntries && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-dark" />
+                )}
+              </button>
+            );
+          })}
+          <div className="h-10 w-px bg-dark-border" />
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="bg-dark-card border border-dark-border rounded-lg px-3 py-2 text-white text-sm focus:border-accent focus:outline-none transition"
+          />
+        </div>
+        {scheduledDates.filter(d => !next7Days.includes(d)).length > 0 && (
+          <div className="flex gap-2 flex-wrap mt-3 pt-3 border-t border-dark-border/50">
+            <span className="text-grey text-[10px] uppercase tracking-wider self-center mr-1">Other days:</span>
+            {scheduledDates.filter(d => !next7Days.includes(d)).slice(0, 10).map(d => (
+              <button
+                key={d}
+                onClick={() => setSelectedDate(d)}
+                className={`px-2.5 py-1 text-[10px] rounded-lg font-semibold transition ${d === selectedDate ? 'bg-accent text-dark' : 'bg-dark-card border border-dark-border text-grey hover:text-white'}`}
+              >
+                {new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        {/* ── Left: Quick Add Panel ── */}
+        <div className="lg:col-span-2">
+          <div className="bg-dark border border-accent/20 rounded-xl p-5 sticky top-24">
+            <p className="text-accent text-xs uppercase tracking-wider font-bold mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Quick Add to {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </p>
+
+            {/* Tournament Select */}
+            <div className="mb-4">
+              <label className="block text-grey text-xs mb-1.5 font-semibold">Tournament</label>
+              {availableToAdd.length === 0 ? (
+                <p className="text-grey/60 text-xs py-2">All tournaments already scheduled for this day.</p>
+              ) : (
+                <select
+                  value={addTournamentId}
+                  onChange={e => setAddTournamentId(e.target.value)}
+                  className="w-full bg-dark-card border border-dark-border rounded-lg px-3 py-2.5 text-white text-sm focus:border-accent focus:outline-none transition"
+                >
+                  <option value="">— Select tournament —</option>
+                  {availableToAdd.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.tier}-Tier {t.gameMode})</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Time Preset Buttons */}
+            <div className="mb-4">
+              <label className="block text-grey text-xs mb-1.5 font-semibold">Stream Time</label>
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {TIME_PRESETS.map(tp => (
+                  <button
+                    key={tp.value}
+                    onClick={() => setAddTime(tp.value)}
+                    className={`px-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                      addTime === tp.value
+                        ? 'bg-accent text-dark ring-1 ring-accent/50 shadow-md shadow-accent/20'
+                        : 'bg-dark-card border border-dark-border text-grey hover:text-white hover:border-accent/30'
+                    }`}
+                  >
+                    {tp.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-grey text-[10px] uppercase">or custom:</span>
+                <input
+                  type="time"
+                  value={addTime}
+                  onChange={e => setAddTime(e.target.value)}
+                  className="bg-dark-card border border-dark-border rounded-lg px-2 py-1.5 text-white text-sm focus:border-accent focus:outline-none transition flex-1"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="mb-4">
+              <label className="block text-grey text-xs mb-1.5 font-semibold">Notes <span className="text-grey/50">(optional)</span></label>
+              <input
+                value={addNotes}
+                onChange={e => setAddNotes(e.target.value)}
+                placeholder="e.g. Grand Finals Day 2"
+                className="w-full bg-dark-card border border-dark-border rounded-lg px-3 py-2 text-white text-sm focus:border-accent focus:outline-none transition placeholder:text-grey/40"
+              />
+            </div>
+
+            {/* Add Button */}
+            <button
+              onClick={handleQuickAdd}
+              disabled={!addTournamentId || !addTime}
+              className={`w-full py-3 rounded-xl font-heading font-bold text-sm uppercase tracking-wider transition-all ${
+                addTournamentId && addTime
+                  ? 'bg-accent hover:bg-accent-dark text-dark shadow-lg shadow-accent/20 hover:shadow-accent/30'
+                  : 'bg-dark-card border border-dark-border text-grey/40 cursor-not-allowed'
+              }`}
+            >
+              + Add to Schedule
+            </button>
+          </div>
+        </div>
+
+        {/* ── Right: Day Timeline ── */}
+        <div className="lg:col-span-3">
+          <div className="bg-dark-card border border-dark-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-heading font-bold text-lg">
+                {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+              {dateEntry && (
+                <button onClick={handleDeleteDay} className="px-3 py-1 text-xs bg-loss/20 text-loss hover:bg-loss/30 rounded-lg transition font-semibold">
+                  Clear Day
+                </button>
+              )}
+            </div>
+
+            {sortedDayTournaments.length === 0 ? (
+              <div className="text-center py-10 border-2 border-dashed border-dark-border rounded-xl">
+                <svg className="w-10 h-10 mx-auto mb-3 text-grey/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-grey text-sm">No streams scheduled</p>
+                <p className="text-grey/50 text-xs mt-1">Use Quick Add to schedule a live stream</p>
+              </div>
+            ) : (
+              <div className="relative">
+                {/* Timeline line */}
+                <div className="absolute left-[18px] top-2 bottom-2 w-[2px] bg-gradient-to-b from-accent/40 via-accent/20 to-transparent" />
+
+                <div className="space-y-4">
+                  {sortedDayTournaments.map((w) => {
+                    const t = allTournaments.find(x => x.id === w.tournamentId);
+                    return (
+                      <div key={w._idx} className="relative flex gap-4 group">
+                        {/* Timeline dot */}
+                        <div className="flex-shrink-0 mt-3 z-10">
+                          <div className="w-[10px] h-[10px] bg-accent rounded-full ring-4 ring-dark-card shadow-[0_0_8px_rgba(201,168,76,0.4)]" />
+                        </div>
+
+                        {/* Card */}
+                        <div className="flex-1 bg-dark border border-dark-border rounded-xl p-4 group-hover:border-accent/30 transition-all">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              {/* Time badge + name */}
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="bg-accent/15 text-accent px-3 py-1 rounded-full text-xs font-bold tracking-wider whitespace-nowrap">
+                                  {formatTime12(w.time) || 'No time'}
+                                </span>
+                                <h4 className="text-white font-heading font-semibold text-sm truncate">{w.name}</h4>
+                              </div>
+
+                              {/* Tier + Mode badges */}
+                              {t && (
+                                <div className="flex items-center gap-2 mb-2">
+                                  <TierBadge tier={t.tier} />
+                                  <span className="text-[10px] text-grey uppercase">{t.gameMode}</span>
+                                  {t.region && <span className="text-[10px] text-grey">{t.region}</span>}
+                                </div>
+                              )}
+
+                              {/* Inline edit: time + notes */}
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                <div>
+                                  <label className="block text-grey text-[10px] uppercase tracking-wider mb-0.5">Time</label>
+                                  <input
+                                    type="time"
+                                    value={w.time || ''}
+                                    onChange={e => handleUpdateWidget(w._idx, 'time', e.target.value)}
+                                    className="w-full bg-dark-card border border-dark-border rounded px-2 py-1 text-white text-xs focus:border-accent focus:outline-none transition"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-grey text-[10px] uppercase tracking-wider mb-0.5">Notes</label>
+                                  <input
+                                    value={w.notes || ''}
+                                    onChange={e => handleUpdateWidget(w._idx, 'notes', e.target.value)}
+                                    placeholder="e.g. Semi Finals"
+                                    className="w-full bg-dark-card border border-dark-border rounded px-2 py-1 text-white text-xs focus:border-accent focus:outline-none transition placeholder:text-grey/30"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveWidget(w._idx)}
+                              className="px-2 py-1.5 text-[10px] bg-loss/15 text-loss hover:bg-loss/25 rounded-lg transition flex-shrink-0 uppercase tracking-wider font-bold"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Agenda Preview ── */}
+          {sortedDayTournaments.length > 0 && (
+            <div className="mt-4 bg-dark border border-accent/10 rounded-xl p-4">
+              <p className="text-accent text-[10px] uppercase tracking-widest font-bold mb-2">Agenda Preview — How it appears on Schedule page</p>
+              <div className="bg-[#0a0a0a] rounded-lg p-3 border border-dark-border/50">
+                <p className="text-accent text-xs font-bold mb-2">
+                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+                </p>
+                {sortedDayTournaments.map((w) => (
+                  <div key={w._idx} className="flex items-center gap-3 py-1.5 border-b border-dark-border/30 last:border-0">
+                    <span className="text-accent font-bold text-xs w-16 text-right">{formatTime12(w.time)}</span>
+                    <span className="w-1.5 h-1.5 bg-accent rounded-full" />
+                    <span className="text-white text-sm font-semibold">{w.name}</span>
+                    {w.notes && <span className="text-grey text-[10px] ml-auto">{w.notes}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── All Scheduled Days Overview ── */}
+      {entries.length > 0 && (
+        <div className="mt-6 bg-dark border border-dark-border rounded-xl p-5">
+          <p className="text-grey text-xs uppercase tracking-wider font-semibold mb-3">All Scheduled Days</p>
+          <div className="space-y-2">
+            {entries.sort((a, b) => (a.date || '').localeCompare(b.date || '')).map(entry => (
+              <div
+                key={entry.id}
+                className={`flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition ${entry.date === selectedDate ? 'bg-accent/10 border border-accent/30' : 'bg-dark-card border border-dark-border/50 hover:border-accent/20'}`}
+                onClick={() => setSelectedDate(entry.date)}
+              >
+                <div>
+                  <p className="text-white font-semibold text-sm">
+                    {new Date(entry.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                  <p className="text-grey text-xs mt-0.5">{(entry.tournaments || []).length} stream{(entry.tournaments || []).length !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="text-right">
+                  {[...(entry.tournaments || [])].sort((a, b) => (a.time || '').localeCompare(b.time || '')).map((w, i) => (
+                    <p key={i} className="text-grey text-[10px]">
+                      <span className="text-accent font-semibold">{formatTime12(w.time)}</span>
+                      {w.time && ' — '}{w.name}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // =================== ADMIN PAGE ===================
 const TABS = [
   { id: 'overview', label: 'Overview', group: 'tournaments' },
@@ -1533,6 +2040,7 @@ const TABS = [
   { id: 'live-tournaments', label: 'Live', group: 'tournaments' },
   { id: 'live-control', label: 'Live Control', group: 'tournaments' },
   { id: 'completed', label: 'Completed', group: 'tournaments' },
+  { id: 'schedule', label: 'Schedule', group: 'tournaments' },
   { id: 'analytics', label: 'Analytics', group: 'tournaments' },
   { id: 'matches', label: 'Matches', group: 'legacy' },
   { id: 'live', label: 'Live Updater', group: 'legacy' },
@@ -1735,6 +2243,7 @@ export default function Admin() {
             {tab === 'live-tournaments' && <TournamentListTab statusFilter="live" setTab={setTab} />}
             {tab === 'live-control' && <LiveControlPanelTab />}
             {tab === 'completed' && <TournamentListTab statusFilter="completed" setTab={setTab} />}
+            {tab === 'schedule' && <ScheduleTab />}
             {tab === 'analytics' && <AnalyticsTab />}
             {tab === 'matches' && <MatchesTab />}
             {tab === 'live' && <LiveUpdaterTab />}

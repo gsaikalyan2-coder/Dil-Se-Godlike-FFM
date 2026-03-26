@@ -30,65 +30,34 @@ const PREVIOUS_TIMELINE = [
 /* ═══ Timeline Component ═══ */
 function Timeline({ events }) {
   return (
-    <div className="mt-14">
-      {/* Timeline Heading */}
-      <h2
-        className="font-heading font-bold text-2xl sm:text-3xl uppercase mb-8"
-        style={{ letterSpacing: '0.12em', color: '#c9a84c' }}
-      >
-        Timeline
-      </h2>
+    <div className="mt-20">
+      <div className="flex items-center gap-4 mb-10">
+         <span className="material-symbols-outlined text-[#e6c364] text-3xl">history</span>
+         <h2 className="font-headline font-black text-3xl sm:text-4xl text-white uppercase tracking-tighter">Timeline</h2>
+      </div>
 
-      {/* Timeline Events */}
-      <div className="relative pl-8">
-        {/* Vertical Line */}
-        <div
-          className="absolute left-[11px] top-2 bottom-2 w-[2px]"
-          style={{ background: 'linear-gradient(180deg, #c9a84c 0%, rgba(201,168,76,0.15) 100%)' }}
-        />
+      <div className="relative pl-6 lg:pl-10">
+        {/* Vertical Glow Line */}
+        <div className="absolute left-[13px] lg:left-[29px] top-4 bottom-[-20px] w-1 bg-gradient-to-b from-[#e6c364]/40 via-[#e6c364]/10 to-transparent rounded-full" />
 
         {events.map((item, i) => {
-          const color = item.type === 'joined' ? '#22c55e' : '#ef4444';
+          const isJoin = item.type === 'joined';
+          const dotColor = isJoin ? 'bg-[#22c55e]' : 'bg-[#ef4444]';
+          const glowColor = isJoin ? 'shadow-[0_0_15px_rgba(34,197,94,0.6)]' : 'shadow-[0_0_15px_rgba(239,68,68,0.6)]';
+          const borderColor = isJoin ? 'border-[#22c55e]/20' : 'border-[#ef4444]/20';
+          const borderSideColor = isJoin ? 'border-l-[#22c55e]' : 'border-l-[#ef4444]';
 
           return (
-            <div
-              key={i}
-              className="relative mb-8 last:mb-0 animate-slide-up"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              {/* Dot */}
-              <div
-                className="absolute -left-8 top-1 w-[12px] h-[12px] rounded-full"
-                style={{
-                  backgroundColor: color,
-                  boxShadow: `0 0 8px ${color}55`,
-                  border: '2px solid #0d0d0f',
-                }}
-              />
+            <div key={i} className="relative mb-6 last:mb-0 animate-slide-up" style={{ animationDelay: `${i * 100}ms` }}>
+              {/* Timeline Node */}
+              <div className={`absolute -left-[32px] lg:-left-[24px] top-6 w-[14px] h-[14px] rounded-full ${dotColor} ${glowColor}`} />
 
-              {/* Content */}
-              <div
-                className="rounded-xl px-5 py-4 transition-all duration-300"
-                style={{
-                  background: 'linear-gradient(145deg, #1a1710 0%, #0f0e0c 100%)',
-                  border: '1px solid rgba(201, 168, 76, 0.1)',
-                  borderLeft: `3px solid ${color}`,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.border = `1px solid rgba(201, 168, 76, 0.3)`;
-                  e.currentTarget.style.borderLeft = `3px solid ${color}`;
-                  e.currentTarget.style.boxShadow = `0 0 15px ${color}15`;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.border = '1px solid rgba(201, 168, 76, 0.1)';
-                  e.currentTarget.style.borderLeft = `3px solid ${color}`;
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <p className="font-heading font-bold text-sm tracking-wider mb-1" style={{ color: '#c9a84c' }}>
+              {/* Event Card (Bento Style) */}
+              <div className={`group relative bg-[#13110e]/80 backdrop-blur-xl border ${borderColor} rounded-2xl p-6 transition-all duration-300 hover:bg-[#1a1710]/90 border-l-[4px] ${borderSideColor} shadow-lg hover:shadow-xl hover:-translate-y-1`}>
+                <p className="font-label font-bold text-xs tracking-widest uppercase mb-2 text-[#e6c364] opacity-80 group-hover:opacity-100 transition-opacity">
                   {item.date}
                 </p>
-                <p className="text-sm" style={{ color: '#b0a080' }}>
+                <p className="font-body text-white/80 text-sm leading-relaxed group-hover:text-white transition-colors">
                   {item.event}
                 </p>
               </div>
@@ -100,119 +69,73 @@ function Timeline({ events }) {
   );
 }
 
-/* ═══ Player Card Component ═══ */
+/* ═══ Player Card Component (Pro Max Bento) ═══ */
 function PlayerCard({ player, index, inactive }) {
   const navigate = useNavigate();
-  const initial = player.game_name && player.game_name !== 'TBD'
-    ? player.game_name.charAt(0).toUpperCase()
-    : '?';
-  const kills = player.total_kills || 0;
-  const matches = player.matches_played || 0;
+  const initial = player.game_name && player.game_name !== 'TBD' ? player.game_name.charAt(0).toUpperCase() : '?';
   const isTBD = player.game_name === 'TBD';
-
   const isClickable = !inactive && !isTBD;
 
   return (
     <div
       onClick={() => isClickable && navigate(`/player/${player.id}`)}
-      className={`group relative ${isClickable ? 'cursor-pointer' : 'cursor-default'} rounded-[16px] p-5 transition-all duration-300 animate-slide-up`}
-      style={{
-        animationDelay: `${index * 80}ms`,
-        background: 'linear-gradient(145deg, #1a1710 0%, #141210 50%, #0f0e0c 100%)',
-        border: '1px solid rgba(201, 168, 76, 0.15)',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.border = '1px solid rgba(201, 168, 76, 0.4)';
-        e.currentTarget.style.boxShadow = '0 0 25px rgba(201, 168, 76, 0.12)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.border = '1px solid rgba(201, 168, 76, 0.15)';
-        e.currentTarget.style.boxShadow = 'none';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
+      className={`group relative bg-[#13110e]/60 backdrop-blur-xl border border-white/5 rounded-3xl p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden ${
+        isClickable ? 'cursor-pointer hover:border-[#e6c364]/40 hover:bg-[#1a1710]/90 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(230,195,100,0.08)]' : 'cursor-default opacity-80'
+      } animate-slide-up`}
+      style={{ animationDelay: `${index * 80}ms` }}
     >
-      {/* Status Badge - Top Right */}
-      <div className="absolute top-4 right-4 flex items-center gap-1.5">
-        <span
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: inactive ? '#ef4444' : '#22c55e' }}
-        />
-        <span
-          className="text-[10px] font-bold uppercase tracking-wider"
-          style={{ color: inactive ? '#ef4444' : '#22c55e' }}
-        >
-          {inactive ? 'INACTIVE' : 'ACTIVE'}
+      {/* Background Hover Glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#e6c364]/0 via-[#e6c364]/0 to-[#e6c364]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+      {/* Status Badge */}
+      <div className="absolute top-5 right-5 flex items-center gap-2">
+        <span className={`w-2.5 h-2.5 rounded-full ${inactive ? 'bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]'}`} />
+        <span className={`font-label text-[9px] font-bold uppercase tracking-widest ${inactive ? 'text-red-400' : 'text-green-400'}`}>
+          {inactive ? 'Inactive' : 'Active'}
         </span>
       </div>
 
-      {/* Avatar */}
-      <div className="mb-3">
+      <div className="relative z-10 w-full mb-6">
+        {/* Avatar Area */}
         {player.photo_url ? (
-          <img
-            src={player.photo_url}
-            alt={player.game_name}
-            className="w-[64px] h-[64px] rounded-xl object-cover"
-            style={{
-              border: '2px solid rgba(201, 168, 76, 0.25)',
-              objectPosition: 'top center',
-            }}
-          />
+          <div className="w-[80px] h-[80px] rounded-2xl overflow-hidden border border-white/10 group-hover:border-[#e6c364]/50 transition-colors shadow-inner mb-5">
+            <img src={player.photo_url} alt={player.game_name} className="w-full h-full object-cover object-top filter group-hover:brightness-110 transition-all scale-100 group-hover:scale-110 duration-500" />
+          </div>
         ) : (
-          <div
-            className="w-[64px] h-[64px] rounded-xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, #2a2418 0%, #1a1610 100%)',
-              border: '2px solid rgba(201, 168, 76, 0.2)',
-            }}
-          >
-            {/* Silhouette SVG for inactive/TBD, initial letter otherwise */}
+          <div className="w-[80px] h-[80px] rounded-2xl bg-[#0a0a09] border border-white/10 group-hover:border-[#e6c364]/30 flex items-center justify-center mb-5 shadow-inner transition-colors">
             {isTBD || inactive ? (
-              <svg className="w-8 h-8 opacity-30" fill="#c9a84c" viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-              </svg>
+              <span className="material-symbols-outlined text-white/20 text-3xl">person</span>
             ) : (
-              <span className="font-heading font-bold text-2xl" style={{ color: '#c9a84c' }}>
-                {initial}
-              </span>
+              <span className="font-headline font-black text-4xl text-[#e6c364] opacity-50">{initial}</span>
             )}
           </div>
         )}
-      </div>
 
-      {/* Role Badge */}
-      <div className="mb-3">
-        <span
-          className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-          style={{
-            background: inactive ? '#333' : 'linear-gradient(135deg, #c9a84c, #a68a3e)',
-            color: inactive ? '#888' : '#0d0d0f',
-          }}
-        >
-          {player.role}
+        {/* Role Pill */}
+        <span className={`inline-block px-3 py-1.5 rounded-full font-label text-[9px] font-bold uppercase tracking-widest mb-3 ${
+          inactive ? 'bg-white/5 text-white/40' : 'bg-gradient-to-r from-[#e6c364]/10 to-[#c9a84c]/5 border border-[#e6c364]/20 text-[#e6c364]'
+        }`}>
+          {player.role || 'Player'}
         </span>
+
+        {/* Names */}
+        <h3 className={`font-headline font-black text-2xl uppercase tracking-tighter mb-1 transition-colors ${inactive ? 'text-white/60' : 'text-white group-hover:text-[#e6c364]'}`}>
+          {player.game_name}
+        </h3>
+        <p className="font-label text-[10px] uppercase tracking-[0.2em] text-white/30 hidden">
+          Real Name
+        </p>
       </div>
 
-      {/* Player Name */}
-      <h3 className="font-heading font-bold text-lg uppercase tracking-wide" style={{ color: inactive ? '#888' : '#e8d5a3' }}>
-        {player.game_name}
-      </h3>
-      <p className="text-[11px] uppercase tracking-[0.2em] mt-0.5 mb-4" style={{ color: inactive ? '#555' : '#8b7a4a' }}>
-        {player.role}
-      </p>
-
-      {/* Divider */}
-      <div className="w-full h-px mb-4" style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.3) 0%, rgba(201,168,76,0.05) 100%)' }} />
-
-      {/* Stats */}
-      <div className="flex gap-6">
+      {/* Stats Area (Neumorphic insertion) */}
+      <div className="relative z-10 mt-auto pt-5 border-t border-white/5 grid grid-cols-2 gap-4">
         <div>
-          <p className="text-[9px] uppercase tracking-[0.15em] mb-1" style={{ color: '#8b7a4a' }}>Total Kills</p>
-          <p className="font-heading font-bold text-xl" style={{ color: inactive ? '#444' : '#c9a84c' }}>{kills}</p>
+          <span className="block font-label text-[9px] uppercase tracking-widest text-[#e6c364]/60 mb-1">Kills</span>
+          <span className={`font-headline font-black text-2xl ${inactive ? 'text-white/40' : 'text-white'}`}>{player.total_kills || 0}</span>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-[0.15em] mb-1" style={{ color: '#8b7a4a' }}>Matches</p>
-          <p className="font-heading font-bold text-xl" style={{ color: inactive ? '#444' : '#c9a84c' }}>{matches}</p>
+          <span className="block font-label text-[9px] uppercase tracking-widest text-[#e6c364]/60 mb-1">Matches</span>
+          <span className={`font-headline font-black text-2xl ${inactive ? 'text-white/40' : 'text-white'}`}>{player.matches_played || 0}</span>
         </div>
       </div>
     </div>
@@ -224,111 +147,96 @@ export default function Roster() {
   const [activeTab, setActiveTab] = useState('current');
   const activePlayers = getActivePlayers();
   const inactivePlayers = getInactivePlayers();
-
-  // Use inactive players from store if available, otherwise show TBD placeholders
   const previousPlayers = inactivePlayers.length > 0 ? inactivePlayers : PREVIOUS_PLACEHOLDERS;
 
   const isCurrent = activeTab === 'current';
   const teamSize = isCurrent ? activePlayers.length : previousPlayers.length;
 
   return (
-    <div className="min-h-screen pt-24 pb-16" style={{ backgroundColor: '#0d0d0f' }}>
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="min-h-screen pt-28 pb-20 bg-[#0a0a0a] text-[#e5e2e1] font-body relative overflow-hidden">
+      {/* Brutalist Grid Background */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#e6c364 1px, transparent 1px), linear-gradient(90deg, #e6c364 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-        {/* ═══ HEADER ═══ */}
-        <div className="flex items-start justify-between mb-8">
+      <div className="max-w-[1400px] w-[95%] mx-auto px-4 lg:px-6 relative z-10">
+
+        {/* ═══ HEADER (Pro-Max Legacy Brutalism) ═══ */}
+        <div className="mb-16 animate-slide-up flex flex-col md:flex-row md:items-end justify-between gap-8 text-left">
           <div>
-            <h1 className="font-heading font-bold text-4xl sm:text-5xl text-white uppercase" style={{ letterSpacing: '0.12em' }}>
-              {isCurrent ? 'CURRENT ROSTER' : 'PREVIOUS ROSTER'}
+            <span className="font-label text-[#e6c364] tracking-[0.4em] text-xs font-bold uppercase mb-4 block">Deployment</span>
+            <h1 className="font-headline font-black text-6xl sm:text-7xl lg:text-8xl text-white uppercase tracking-tighter leading-none shadow-sm mb-4">
+              The <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e6c364] to-[#c9a84c]">Lineup</span>
             </h1>
-            <p className="text-xs sm:text-sm uppercase mt-2" style={{ letterSpacing: '0.2em', color: '#8b7a4a' }}>
-              {isCurrent ? 'THE GOLDEN ARMY REPRESENTING GODLIKE FFM' : 'FORMER MEMBERS OF GODLIKE FFM'}
+            <p className="max-w-md text-white/50 font-body text-sm leading-relaxed border-l-2 border-[#e6c364]/30 pl-4 uppercase tracking-widest font-bold">
+              {isCurrent ? 'The Golden Army representing GodLike Esports in active operations.' : 'Honoring the former operatives of the Golden Army.'}
             </p>
           </div>
-          <div
-            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full text-sm font-heading font-semibold"
-            style={{ background: '#1a1710', border: '1px solid rgba(201,168,76,0.2)', color: '#c9a84c' }}
-          >
-            <span className="text-xs uppercase tracking-wider" style={{ color: '#8b7a4a' }}>Team Size:</span>
-            <span className="text-lg font-bold">{String(teamSize).padStart(2, '0')}</span>
+          
+          <div className="flex items-center gap-4 bg-[#13110e]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
+             <div className="flex flex-col">
+                <span className="font-label text-[#e6c364]/60 uppercase tracking-widest text-[10px] mb-1">Total Operators</span>
+                <span className="font-headline font-black text-4xl text-white">{String(teamSize).padStart(2, '0')}</span>
+             </div>
+             <span className="material-symbols-outlined text-[#e6c364]/20 text-5xl ml-4">groups</span>
           </div>
         </div>
 
-        {/* ═══ TAB BUTTONS ═══ */}
-        <div className="flex gap-2 mb-10">
+        {/* ═══ SLEEK GLASS TAB CONTROLS ═══ */}
+        <div className="flex gap-4 mb-12">
           <button
             onClick={() => setActiveTab('current')}
-            className="relative px-6 py-3 rounded-xl font-heading font-bold text-sm uppercase tracking-wider transition-all duration-300"
-            style={{
-              background: isCurrent
-                ? 'linear-gradient(135deg, #c9a84c, #a68a3e)'
-                : '#1a1710',
-              color: isCurrent ? '#0d0d0f' : '#8b7a4a',
-              border: isCurrent
-                ? '1px solid rgba(201, 168, 76, 0.6)'
-                : '1px solid rgba(201, 168, 76, 0.15)',
-            }}
+            className={`relative px-8 py-4 rounded-2xl font-headline font-bold text-sm tracking-[0.15em] uppercase transition-all duration-300 overflow-hidden group ${
+              isCurrent ? 'text-[#0a0a0a]' : 'text-white/40 hover:text-white bg-[#131313]/50 border border-white/5'
+            }`}
           >
-            Current Roster
-            {isCurrent && (
-              <div
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-8 h-1 rounded-full"
-                style={{ background: '#c9a84c' }}
-              />
-            )}
+            {isCurrent && <div className="absolute inset-0 bg-gradient-to-r from-[#e6c364] to-[#c9a84c] rounded-2xl" />}
+            <span className="relative z-10 flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isCurrent ? 'bg-[#0a0a0a]' : 'bg-transparent'}`}></span>
+              Active Force
+            </span>
           </button>
+          
           <button
             onClick={() => setActiveTab('previous')}
-            className="relative px-6 py-3 rounded-xl font-heading font-bold text-sm uppercase tracking-wider transition-all duration-300"
-            style={{
-              background: !isCurrent
-                ? 'linear-gradient(135deg, #c9a84c, #a68a3e)'
-                : '#1a1710',
-              color: !isCurrent ? '#0d0d0f' : '#8b7a4a',
-              border: !isCurrent
-                ? '1px solid rgba(201, 168, 76, 0.6)'
-                : '1px solid rgba(201, 168, 76, 0.15)',
-            }}
+            className={`relative px-8 py-4 rounded-2xl font-headline font-bold text-sm tracking-[0.15em] uppercase transition-all duration-300 overflow-hidden group ${
+              !isCurrent ? 'text-[#0a0a0a]' : 'text-white/40 hover:text-white bg-[#131313]/50 border border-white/5'
+            }`}
           >
-            Previous Roster
-            {!isCurrent && (
-              <div
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-8 h-1 rounded-full"
-                style={{ background: '#c9a84c' }}
-              />
-            )}
+            {!isCurrent && <div className="absolute inset-0 bg-gradient-to-r from-[#e6c364] to-[#c9a84c] rounded-2xl" />}
+            <span className="relative z-10 flex items-center gap-2">
+              Previous Roster
+            </span>
           </button>
         </div>
 
-        {/* ═══ PLAYER GRID ═══ */}
-        <div
-          className="transition-opacity duration-300"
-          style={{ opacity: 1 }}
-          key={activeTab}
-        >
+        {/* ═══ BENTO GRID PLAYER CARDS ═══ */}
+        <div className="transition-all duration-500 ease-in-out" key={activeTab}>
           {isCurrent ? (
             activePlayers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 {activePlayers.map((p, i) => (
                   <PlayerCard key={p.id} player={p} index={i} />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <p style={{ color: '#8b7a4a' }} className="text-lg">No active players in the roster</p>
+              <div className="bg-[#131313]/30 border border-white/5 rounded-3xl p-16 text-center">
+                <span className="material-symbols-outlined text-white/20 text-6xl mb-4">group_off</span>
+                <p className="font-headline text-xl text-white/40 uppercase tracking-widest">No active operatives deployed.</p>
               </div>
             )
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {previousPlayers.map((p, i) => (
                 <PlayerCard key={p.id} player={p} index={i} inactive />
               ))}
             </div>
           )}
 
-          {/* ═══ TIMELINE ═══ */}
-          <Timeline events={isCurrent ? CURRENT_TIMELINE : PREVIOUS_TIMELINE} />
+          {/* ═══ TIMELINE BENTO ═══ */}
+          <div className="mt-20 border-t border-white/5 pt-10">
+             <Timeline events={isCurrent ? CURRENT_TIMELINE : PREVIOUS_TIMELINE} />
+          </div>
         </div>
+
       </div>
     </div>
   );

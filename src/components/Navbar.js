@@ -1,65 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { getLiveMatch } from '../data/store';
 import { useLiveTournament } from '../hooks/useTournamentStoreSync';
 
 const navLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/live', label: 'Live Scores' },
-  { to: '/roster', label: 'Roster' },
+  { to: '/', label: 'Overview' },
   { to: '/schedule', label: 'Schedule' },
-  { to: '/history', label: 'History' },
-  { to: '/tournaments', label: 'Tournaments' },
+  { to: '/roster', label: 'Teams' },
+  { to: '/tournaments', label: 'History' },
+  { to: '/heartbreak', label: 'Heartbreak' },
   { to: '/admin', label: 'Admin' },
 ];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const live = getLiveMatch();
   const liveTournament = useLiveTournament();
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#FFB800] border-b border-[#E6A600]">
-      {/* Logo - absolute top-left corner of screen */}
-      <Link to="/" className="absolute top-0 left-0 sm:left-4 z-[60] flex items-center h-16 transition-opacity hover:opacity-80">
+    <nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${
+        scrolled 
+          ? 'bg-[#0a0a09]/90 backdrop-blur-2xl border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.5)] py-0' 
+          : 'bg-transparent border-transparent py-2'
+      }`}
+    >
+      {/* Brutalist Top Accent Line */}
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#e6c364]/30 to-transparent" />
+
+      {/* Logo - Absolute positioning to hover over content */}
+      <Link to="/" className="absolute top-0 left-4 sm:left-8 z-[60] flex items-center h-16 sm:h-20 transition-transform duration-500 hover:scale-105 origin-left">
         <img 
           src="/images/images (2).png" 
           alt="GodLike FFM Logo" 
-          className="w-[190px] sm:w-[200px] h-full object-contain object-left drop-shadow-sm scale-110 sm:scale-[1.3] origin-left"
+          className="w-[160px] sm:w-[220px] h-full object-contain object-left drop-shadow-2xl brightness-110 contrast-125"
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
         />
       </Link>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center h-16 relative">
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-2">
-            {navLinks.map(link => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`px-4 py-2 rounded-md text-sm font-bold transition-all no-underline ${
-                  location.pathname === link.to
-                    ? 'text-white bg-black'
-                    : 'text-black hover:bg-black/10 hover:text-black'
-                }`}
-              >
-                {link.label}
-                {link.to === '/live' && live && (
-                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
-                )}
-                {link.to === '/' && liveTournament && (
-                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
-                )}
-              </Link>
-            ))}
+        <div className="flex items-center justify-center h-16 sm:h-20 relative">
+          
+          {/* Desktop Glassmorphic Pill Tab Bar */}
+          <div className="hidden md:block">
+            <div className="bg-[#111113]/80 backdrop-blur-md rounded-full p-1.5 flex items-center border border-white/5 shadow-inner">
+              {navLinks.map(link => {
+                const isActive = location.pathname === link.to;
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={`relative px-6 py-2 rounded-full font-headline font-bold text-xs uppercase tracking-[0.15em] transition-all duration-300 whitespace-nowrap overflow-hidden group ${
+                      isActive
+                        ? 'text-[#0a0a0a]'
+                        : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    {isActive && (
+                      <span className="absolute inset-0 bg-gradient-to-r from-[#e6c364] to-[#c9a84c] rounded-full shadow-[0_0_15px_rgba(230,195,100,0.4)]" />
+                    )}
+                    <span className="relative z-10 flex items-center">
+                      {link.label}
+                      {link.to === '/' && liveTournament && (
+                        <span className={`ml-2 inline-block w-2 h-2 rounded-full animate-ping ${isActive ? 'bg-red-600' : 'bg-red-500'}`} />
+                      )}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
           {/* Mobile hamburger */}
           <button
             onClick={() => setOpen(!open)}
-            className="md:hidden absolute right-0 text-black p-2 rounded-md hover:bg-black/10 transition"
+            className="md:hidden absolute right-0 text-[#e6c364] p-2 rounded-md hover:bg-white/5 transition border border-transparent hover:border-white/10"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {open ? (
@@ -72,33 +95,31 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {open && (
-        <div className="md:hidden border-t border-[#E6A600] bg-[#FFB800]">
-          <div className="px-4 py-3 space-y-1">
-            {navLinks.map(link => (
+      {/* Mobile Menu Panel (Glassmorphic Slide-Down) */}
+      <div className={`md:hidden overflow-hidden transition-all duration-500 ease-in-out ${open ? 'max-h-96 opacity-100 border-t border-white/5 bg-[#0a0a09]/95 backdrop-blur-3xl' : 'max-h-0 opacity-0'}`}>
+        <div className="px-4 py-4 space-y-2">
+          {navLinks.map(link => {
+            const isActive = location.pathname === link.to;
+            return (
               <Link
                 key={link.to}
                 to={link.to}
                 onClick={() => setOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-bold no-underline ${
-                  location.pathname === link.to
-                    ? 'text-white bg-black'
-                    : 'text-black hover:bg-black/10 hover:text-black'
+                className={`block px-4 py-3 rounded-xl font-headline font-bold text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-between ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#e6c364]/10 to-transparent text-[#e6c364] border-l-2 border-[#e6c364]'
+                    : 'text-white/60 hover:bg-white/5 hover:text-white border-l-2 border-transparent'
                 }`}
               >
-                {link.label}
-                {link.to === '/live' && live && (
-                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
-                )}
+                <span>{link.label}</span>
                 {link.to === '/' && liveTournament && (
-                  <span className="ml-1.5 inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse-live" />
+                  <span className="inline-block w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
                 )}
               </Link>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
     </nav>
   );
 }

@@ -11,7 +11,7 @@ import {
   lidomaAsiaClash,
   godlikeLidomaSummary,
   zeeMediaAOC, aocGodlikeJourney, aocGrandFinalsStandings,
-  iqooProS3, iqooPS3GodlikeJourney, iqooPS3GrandFinalsStandings,
+  iqooProS3, iqooPS3GodlikeJourney, iqooPS3GrandFinalsStandings, iqooPS3GodlikeDayByDay,
   ngAsiaChamp, ngACGodlikeJourney, ngACGrandFinalsStandings,
   prgSurvivorSeries, prgGodlikeJourney, prgGrandFinalsStandings,
   rapidDignityCup, rapidGFStandings, rapidGodlikeJourney,
@@ -29,6 +29,9 @@ const TOURNAMENT_KEYS = {
   INDEX: 'tournaments-index',
   PREFIX: 'tournament:',
 };
+
+const SEED_VERSION = 2;
+const SEED_VERSION_KEY = 'tournaments-seed-version';
 
 const ACTIVITY_LOG_KEY = 'glffm_activity_log';
 
@@ -156,6 +159,7 @@ export function createBlankTournament() {
     godlikePrizeINR: 0,
     godlikePrizeUSD: 0,
     roster: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
+    playingFour: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -300,10 +304,8 @@ export function validateTournament(data) {
 }
 
 // ─── Auto-Calculating Standings ───
-const FF_PLACEMENT_PTS = [0, 12, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1];
 function getPlacementPoints(placement) {
-  if (placement < 1 || placement > 18) return 0;
-  return FF_PLACEMENT_PTS[placement] || 0;
+  return Number(placement) || 0;
 }
 
 export function computeAutoStandings(tournament) {
@@ -321,6 +323,37 @@ export function computeAutoStandings(tournament) {
     rank: null, team: 'GodLike', booyahs: totalBooyahs, kills: totalKills,
     placementPts: totalPlacementPts, points: totalPlacementPts + totalKills,
     isGodlike: true, matchesPlayed: matchCount,
+  };
+}
+
+export function computeSquadPerformance(tournament) {
+  if (!tournament || !tournament.stages) return { players: [], totalPoints: 0, totalKills: 0, totalMatches: 0, totalBooyahs: 0 };
+  const activeRoster = tournament.playingFour?.length > 0 ? tournament.playingFour : (tournament.roster || []);
+  const playerMap = {};
+  activeRoster.forEach(p => { playerMap[p] = { name: p, kills: 0, matchesPlayed: 0 }; });
+  let totalKills = 0, totalPlacementPts = 0, totalMatches = 0, totalBooyahs = 0;
+  tournament.stages.forEach(stage => {
+    (stage.matches || []).forEach(match => {
+      totalMatches++;
+      totalKills += match.kills || 0;
+      totalPlacementPts += getPlacementPoints(match.placement || 0);
+      if (match.booyah) totalBooyahs++;
+      if (match.playerKills) {
+        Object.entries(match.playerKills).forEach(([p, k]) => {
+          if (playerMap[p]) {
+            playerMap[p].kills += k || 0;
+            if (k > 0) playerMap[p].matchesPlayed++;
+          }
+        });
+      }
+    });
+  });
+  return {
+    players: activeRoster.map(p => playerMap[p] || { name: p, kills: 0, matchesPlayed: 0 }),
+    totalPoints: totalPlacementPts + totalKills,
+    totalKills,
+    totalMatches,
+    totalBooyahs,
   };
 }
 
@@ -441,6 +474,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '9th (BR) / Runner-Up (CS)',
     godlikePrizeINR: 500000,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 2. FFMAI 2025
@@ -471,6 +505,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '6th (BR) / 9th-15th (CS)',
     godlikePrizeUSD: 1900,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 3. Lidoma Endless Series 2025
@@ -502,6 +537,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '2nd (South Asia) / 9th (Asia Playoffs)',
     godlikePrizeUSD: 1450,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 4. Zee Media AOC
@@ -524,10 +560,24 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: 'Eliminated in Qualifiers',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 5. iQOO Pro Series S3
   const iqooDates = parseDateRange(iqooProS3.dates);
+  const iqooStages = ['day1', 'day2', 'day3'].map((dayKey, i) => ({
+    name: `Grand Finals - Day ${i + 1}`,
+    type: 'br_points',
+    description: `${iqooPS3GodlikeDayByDay[dayKey].matches} matches — ${iqooPS3GodlikeDayByDay[dayKey].dayTotal} pts`,
+    matches: iqooPS3GodlikeDayByDay[dayKey].games.map(g => ({
+      matchNum: g.game,
+      placement: g.placement,
+      kills: g.kills,
+      booyah: g.placement === 1,
+      map: g.map,
+      playerKills: g.playerKills || {},
+    })),
+  }));
   tournaments.push(buildSeedTournament('seed_iqoops3', {
     name: iqooProS3.name,
     organizer: iqooProS3.organizer || 'iQOO / Garena',
@@ -538,6 +588,7 @@ function seedAllTournaments() {
     endDate: iqooDates.end,
     prizePoolINR: iqooProS3.prizePool ? parseInt(String(iqooProS3.prizePool).replace(/[^\d]/g, '')) || 0 : 0,
     teamsCount: iqooProS3.totalTeams || 18,
+    stages: iqooStages,
     standings: iqooPS3GrandFinalsStandings?.map(r => ({
       rank: r.rank, team: r.team, points: r.points, booyahs: r.booyahs, prize: r.prize, isGodlike: r.isGodlike,
     })) || [],
@@ -547,6 +598,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '7th',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 6. NG Asia Championship
@@ -570,6 +622,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '11th',
     godlikePrizeUSD: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 7. PRG Survivor Series
@@ -593,6 +646,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '3rd',
     godlikePrizeINR: 7500,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 8. Rapid Dignity Cup
@@ -616,6 +670,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '5th',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 9. Lidoma Regional Wars
@@ -641,6 +696,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: 'Eliminated in Last Chance',
     godlikePrizeUSD: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 10. OneBlade Inferno League
@@ -665,6 +721,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: 'Eliminated in Play-Ins (5th)',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 11. Urbansky Gaming Series
@@ -688,6 +745,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '8th',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 12. RBZ Regional Cup BR
@@ -711,6 +769,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: '2nd (Runner-Up)',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
   }));
 
   // 13. RBZ Regional Cup CS
@@ -732,6 +791,7 @@ function seedAllTournaments() {
     ],
     godlikeFinalPosition: 'CHAMPIONS',
     godlikePrizeINR: 0,
+    playingFour: ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
     csMatches: [
       {
         round: 'Round 1',
@@ -762,16 +822,39 @@ function seedAllTournaments() {
 
 // ─── Init Function (called from App.js) ───
 export function initTournamentStore() {
-  // Guard: don't re-seed if index already exists
-  if (localStorage.getItem(TOURNAMENT_KEYS.INDEX)) return;
+  const storedVersion = parseInt(localStorage.getItem(SEED_VERSION_KEY) || '0', 10);
 
-  const tournaments = seedAllTournaments();
-  const index = [];
-
-  for (const t of tournaments) {
-    setJSON(TOURNAMENT_KEYS.PREFIX + t.id, t);
-    index.push({ id: t.id, status: t.status });
+  // Re-seed if version is outdated: clear old seed data, keep user-created tournaments
+  if (storedVersion < SEED_VERSION && localStorage.getItem(TOURNAMENT_KEYS.INDEX)) {
+    const existingIndex = getJSON(TOURNAMENT_KEYS.INDEX, []);
+    // Remove only seed tournaments (ids starting with 'seed_')
+    existingIndex.forEach(entry => {
+      if (entry.id && entry.id.startsWith('seed_')) {
+        localStorage.removeItem(TOURNAMENT_KEYS.PREFIX + entry.id);
+      }
+    });
+    // Keep user-created tournaments in the index
+    const userEntries = existingIndex.filter(entry => !entry.id?.startsWith('seed_'));
+    const tournaments = seedAllTournaments();
+    const seedEntries = [];
+    for (const t of tournaments) {
+      setJSON(TOURNAMENT_KEYS.PREFIX + t.id, t);
+      seedEntries.push({ id: t.id, status: t.status });
+    }
+    setJSON(TOURNAMENT_KEYS.INDEX, [...seedEntries, ...userEntries]);
+    localStorage.setItem(SEED_VERSION_KEY, String(SEED_VERSION));
+    return;
   }
 
-  setJSON(TOURNAMENT_KEYS.INDEX, index);
+  // First-time init: no index exists yet
+  if (!localStorage.getItem(TOURNAMENT_KEYS.INDEX)) {
+    const tournaments = seedAllTournaments();
+    const index = [];
+    for (const t of tournaments) {
+      setJSON(TOURNAMENT_KEYS.PREFIX + t.id, t);
+      index.push({ id: t.id, status: t.status });
+    }
+    setJSON(TOURNAMENT_KEYS.INDEX, index);
+    localStorage.setItem(SEED_VERSION_KEY, String(SEED_VERSION));
+  }
 }
