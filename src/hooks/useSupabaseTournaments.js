@@ -33,7 +33,7 @@ export function useTournamentsByStatus(status) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [load]);
+  }, [status]);
 
   return { tournaments, loading };
 }
