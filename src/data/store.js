@@ -61,12 +61,13 @@ const DEFAULT_MATCHES = [
 ];
 
 const DEFAULT_PLAYERS = [
-  { id: 1, name: 'Player One', game_name: 'GodL.Yogi', role: 'IGL/Sniper', bio: 'Team captain and in-game leader', photo_url: '/players/yogi.png', is_active: true, total_kills: 265, matches_played: 120, best_rank: 1, win_rate: 42, avg_kills: 0, tournaments_played: 15, instagram: '', youtube: '', twitter: '' },
-  { id: 2, name: 'Player Two', game_name: 'GodL.EcoEco', role: 'Sec Rusher/Nader', bio: 'Long range specialist', photo_url: '/players/ecoeco.png', is_active: true, total_kills: 278, matches_played: 119, best_rank: 1, win_rate: 38, avg_kills: 0, tournaments_played: 12, instagram: '', youtube: '', twitter: '' },
-  { id: 3, name: 'Player Three', game_name: 'GodL.Nancy', role: 'Primary Rusher', bio: 'Aggressive entry player', photo_url: '/players/nancy.png', is_active: true, total_kills: 310, matches_played: 125, best_rank: 2, win_rate: 35, avg_kills: 0, tournaments_played: 14, instagram: '', youtube: '', twitter: '' },
-  { id: 4, name: 'Player Four', game_name: 'GodL.Marco', role: 'Rusher/Sniper', bio: 'Team support and rotations', photo_url: '/players/marco.png', is_active: true, total_kills: 198, matches_played: 110, best_rank: 3, win_rate: 40, avg_kills: 0, tournaments_played: 11, instagram: '', youtube: '', twitter: '' },
-  { id: 5, name: 'Player Five', game_name: 'GodL.Nobita', role: 'Rusher/Support', bio: 'Primary rusher and front liner', photo_url: '/players/nobita.png', is_active: true, total_kills: 245, matches_played: 105, best_rank: 2, win_rate: 36, avg_kills: 0, tournaments_played: 10, instagram: '', youtube: '', twitter: '' },
+  { id: 1, name: 'Yogi', game_name: 'GodL.Yogi', role: 'IGL/Sniper', bio: 'Team captain and in-game leader', photo_url: '/players/yogi.png', is_active: true, total_kills: 265, matches_played: 120, best_rank: 1, win_rate: 42, avg_kills: 0, tournaments_played: 15, instagram: '', youtube: '', twitter: '' },
+  { id: 2, name: 'EcoEco', game_name: 'GodL.EcoEco', role: 'Sec Rusher/Nader', bio: 'Long range specialist', photo_url: '/players/ecoeco.png', is_active: true, total_kills: 278, matches_played: 119, best_rank: 1, win_rate: 38, avg_kills: 0, tournaments_played: 12, instagram: '', youtube: '', twitter: '' },
+  { id: 3, name: 'Nancy', game_name: 'GodL.Nancy', role: 'Primary Rusher', bio: 'Aggressive entry player', photo_url: '/players/nancy.png', is_active: true, total_kills: 310, matches_played: 125, best_rank: 2, win_rate: 35, avg_kills: 0, tournaments_played: 14, instagram: '', youtube: '', twitter: '' },
+  { id: 4, name: 'Marco', game_name: 'GodL.Marco', role: 'Rusher/Sniper', bio: 'Team support and rotations', photo_url: '/players/marco.png', is_active: true, total_kills: 198, matches_played: 110, best_rank: 3, win_rate: 40, avg_kills: 0, tournaments_played: 11, instagram: '', youtube: '', twitter: '' },
+  { id: 5, name: 'Nobita', game_name: 'GodL.Nobita', role: 'Rusher/Support', bio: 'Primary rusher and front liner', photo_url: '/players/nobita.png', is_active: true, total_kills: 245, matches_played: 105, best_rank: 2, win_rate: 36, avg_kills: 0, tournaments_played: 10, instagram: '', youtube: '', twitter: '' },
 ];
+const PLAYERS_VERSION = 2;
 
 const DEFAULT_SETTINGS = {
   site_title: 'GodLike FFM',
@@ -91,8 +92,14 @@ function setJSON(key, value) {
 
 export function initStore() {
   if (!localStorage.getItem(KEYS.MATCHES)) setJSON(KEYS.MATCHES, DEFAULT_MATCHES);
-  if (!localStorage.getItem(KEYS.PLAYERS)) setJSON(KEYS.PLAYERS, DEFAULT_PLAYERS);
-  
+
+  // Reset players when version changes (fixes stale/incorrect roster data)
+  const storedVersion = Number(localStorage.getItem('glffm_players_version') || 0);
+  if (!localStorage.getItem(KEYS.PLAYERS) || storedVersion < PLAYERS_VERSION) {
+    setJSON(KEYS.PLAYERS, DEFAULT_PLAYERS);
+    localStorage.setItem('glffm_players_version', String(PLAYERS_VERSION));
+  }
+
   if (!localStorage.getItem(KEYS.SETTINGS)) {
     setJSON(KEYS.SETTINGS, DEFAULT_SETTINGS);
   } else {

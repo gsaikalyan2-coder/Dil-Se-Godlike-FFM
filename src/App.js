@@ -8,7 +8,6 @@ import Home from './pages/Home';
 import LiveScores from './pages/LiveScores';
 import Roster from './pages/Roster';
 import Schedule from './pages/Schedule';
-
 import Admin from './pages/Admin';
 import PlayerProfile from './pages/PlayerProfile';
 import Tournaments from './pages/Tournaments';

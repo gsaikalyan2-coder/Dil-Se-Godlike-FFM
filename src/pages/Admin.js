@@ -1,21 +1,36 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
+  createTournamentInDB,
+  updateTournamentInDB,
+  deleteTournamentFromDB,
+  changeTournamentStatus,
+  appendBrMatchToLastStage,
+  fetchTournamentsByStatus,
+} from '../lib/supabaseTournaments';
+import {
+  fetchScheduleEntries,
+  addScheduleEntryToDB,
+  updateScheduleEntryInDB,
+  deleteScheduleEntryFromDB,
+} from '../lib/supabaseSchedule';
+import {
   getMatches, addMatch, updateMatch, deleteMatch, setLiveMatch,
   getPlayers, addPlayer, updatePlayer, deletePlayer,
   getSettings, saveSettings, getLiveMatch,
-  getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry,
 } from '../data/store';
 import {
   getAllTournaments, getTournamentsByStatus, getTournamentIndex,
-  createTournament, updateTournament, deleteTournament,
-  goLive, markComplete, revertStatus, validateTournament,
+  validateTournament,
   createBlankTournament,
   getActivityLog, clearActivityLog,
   undo, redo, canUndo, canRedo,
-  computeAutoStandings, recalculateGodlikeStandings,
+  computeAutoStandings,
   duplicateTournament, exportTournamentAsMarkdown,
 } from '../data/tournamentStore';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 
 const ROLES = ['IGL', 'Sniper', 'Assaulter', 'Support', 'Entry Fragger'];
 const STATUSES = ['LIVE', 'UPCOMING', 'FINISHED'];
@@ -25,6 +40,8 @@ const TOURNAMENT_STATUS_OPTIONS = ['upcoming', 'live', 'completed'];
 const STAGE_TYPE_OPTIONS = ['br_points', 'cs_bracket', 'round_robin', 'swiss'];
 const CS_FORMAT_OPTIONS = ['Bo1', 'Bo3', 'Bo5'];
 const CHART_COLORS = ['#c9a84c', '#6366f1', '#22c55e', '#ef4444', '#3b82f6', '#f59e0b'];
+
+
 
 function relativeTime(ts) {
   const diff = Date.now() - ts;
@@ -176,11 +193,10 @@ function MatchesTab() {
                 <td className="py-3 px-3 text-grey">{m.tournament}</td>
                 <td className="py-3 px-3 text-grey">{m.date}</td>
                 <td className="py-3 px-3">
-                  <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${
-                    m.status === 'LIVE' ? 'bg-green-500/20 text-green-400' :
+                  <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${m.status === 'LIVE' ? 'bg-green-500/20 text-green-400' :
                     m.status === 'UPCOMING' ? 'bg-upcoming-blue/20 text-upcoming-blue' :
-                    'bg-grey/20 text-grey'
-                  }`}>{m.status}</span>
+                      'bg-grey/20 text-grey'
+                    }`}>{m.status}</span>
                 </td>
                 <td className="py-3 px-3 font-heading font-bold">
                   <span className="text-accent">{m.godlike_score}</span>
@@ -500,14 +516,14 @@ function SettingsTab() {
 
 // =================== LIVE CONTROL PANEL TAB ===================
 function LiveControlPanelTab() {
-  const [liveTournaments, setLiveTournaments] = useState(getTournamentsByStatus('live'));
+  const [liveTournaments, setLiveTournaments] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [tournament, setTournament] = useState(null);
   const [autoStandings, setAutoStandings] = useState(true);
   const [toast, setToast] = useState('');
 
-  const refresh = useCallback(() => {
-    const live = getTournamentsByStatus('live');
+  const refresh = useCallback(async () => {
+    const live = await fetchTournamentsByStatus('live');
     setLiveTournaments(live);
     if (selectedId) {
       const t = live.find(x => x.id === selectedId);
@@ -532,38 +548,31 @@ function LiveControlPanelTab() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); };
 
-  // Quick add match to the last stage (auto-creates a default stage if none exist)
-  const addQuickMatch = (placement, kills, booyah, playerKills) => {
-    if (!tournament) return;
-    let stages = [...(tournament.stages || [])];
-    // Auto-create a default stage if tournament has none
-    if (stages.length === 0) {
-      stages = [{ name: 'Day 1', type: 'br_points', matches: [] }];
-      updateTournament(selectedId, { stages });
-    }
-    const lastStage = { ...stages[stages.length - 1] };
-    const matches = [...(lastStage.matches || [])];
+  // Quick add match to the last stage
+  const addQuickMatch = async (placement, kills, booyah, playerKills) => {
+    if (!tournament || !selectedId) return;
     const rosterFallback = (tournament.playingFour?.length > 0 ? tournament.playingFour : (tournament.roster || ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY']));
     const defaultPK = rosterFallback.reduce((acc, p) => ({ ...acc, [p]: 0 }), {});
-    matches.push({
-      matchNum: matches.length + 1,
+    const matchData = {
+      matchNum: ((tournament.stages || []).at(-1)?.matches?.length || 0) + 1,
       placement: placement || 0,
       kills: kills || 0,
       booyah: booyah || false,
       playerKills: playerKills || defaultPK,
       map: '',
-    });
-    lastStage.matches = matches;
-    stages[stages.length - 1] = lastStage;
-    updateTournament(selectedId, { stages });
-    if (autoStandings) recalculateGodlikeStandings(selectedId);
-    showToast('Match saved!');
-    refresh();
+    };
+    try {
+      await appendBrMatchToLastStage(selectedId, matchData);
+      showToast('Match saved!');
+      refresh();
+    } catch (err) {
+      showToast('Error: ' + err.message);
+    }
   };
 
-  const handleEndTournament = () => {
+  const handleEndTournament = async () => {
     if (!selectedId) return;
-    markComplete(selectedId);
+    await changeTournamentStatus(selectedId, 'completed');
     showToast('Tournament marked complete');
     refresh();
   };
@@ -983,20 +992,24 @@ function CreateTournamentTab({ onCreated }) {
     vodLinks: prev.vodLinks.map((v, idx) => idx === i ? { ...v, [key]: val } : v),
   }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validation = validateTournament(form);
     if (!validation.valid) {
       setErrors(validation.errors);
       return;
     }
     setErrors([]);
-    createTournament(form);
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      setForm(blank);
-      if (onCreated) onCreated();
-    }, 1500);
+    try {
+      await createTournamentInDB(form);
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        setForm(blank);
+        if (onCreated) onCreated();
+      }, 1500);
+    } catch (err) {
+      setErrors([err.message]);
+    }
   };
 
   return (
@@ -1071,7 +1084,10 @@ function TournamentListTab({ statusFilter, setTab }) {
   const [previewId, setPreviewId] = useState(null);
   const autoSaveTimer = useRef(null);
 
-  const refresh = useCallback(() => setTournaments(getTournamentsByStatus(statusFilter)), [statusFilter]);
+  const refresh = useCallback(async () => {
+    const data = await fetchTournamentsByStatus(statusFilter);
+    setTournaments(data);
+  }, [statusFilter]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -1090,32 +1106,34 @@ function TournamentListTab({ statusFilter, setTab }) {
   const closeConfirm = () => setConfirmDialog({ open: false, title: '', message: '', onConfirm: null });
 
   const handleDelete = (id) => {
-    confirm('Delete Tournament', 'Delete this tournament? This cannot be undone.', () => {
-      deleteTournament(id);
+    confirm('Delete Tournament', 'Delete this tournament? This cannot be undone.', async () => {
+      await deleteTournamentFromDB(id);
       refresh();
       closeConfirm();
     });
   };
 
   const handleGoLive = (id) => {
-    confirm('Go Live', 'Move this tournament to LIVE status?', () => {
-      goLive(id);
+    confirm('Go Live', 'Move this tournament to LIVE status?', async () => {
+      await changeTournamentStatus(id, 'live');
       refresh();
       closeConfirm();
     });
   };
 
   const handleMarkComplete = (id) => {
-    confirm('Mark Complete', 'Mark this tournament as COMPLETED?', () => {
-      markComplete(id);
+    confirm('Mark Complete', 'Mark this tournament as COMPLETED?', async () => {
+      await changeTournamentStatus(id, 'completed');
       refresh();
       closeConfirm();
     });
   };
 
   const handleRevert = (id) => {
-    confirm('Revert Status', 'Revert this tournament to previous status?', () => {
-      revertStatus(id);
+    confirm('Revert Status', 'Revert this tournament to previous status?', async () => {
+      const t = tournaments.find(x => x.id === id);
+      const prev = t?.status === 'completed' ? 'live' : 'upcoming';
+      await changeTournamentStatus(id, prev);
       refresh();
       closeConfirm();
     });
@@ -1158,8 +1176,7 @@ function TournamentListTab({ statusFilter, setTab }) {
         if (current && editingId) {
           const validation = validateTournament(current);
           if (validation.valid) {
-            updateTournament(editingId, current);
-            showToast('Auto-saved');
+            updateTournamentInDB(editingId, current).then(() => showToast('Auto-saved')).catch(() => {});
           }
         }
         return current;
@@ -1262,16 +1279,20 @@ function TournamentListTab({ statusFilter, setTab }) {
   const removeJourneyStage = (i) => ef('godlikeJourney', (editForm.godlikeJourney || []).filter((_, idx) => idx !== i));
   const updateJourneyStage = (i, key, val) => ef('godlikeJourney', (editForm.godlikeJourney || []).map((s, idx) => idx === i ? { ...s, [key]: val } : s));
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     const validation = validateTournament(editForm);
     if (!validation.valid) {
       setEditErrors(validation.errors);
       return;
     }
     setEditErrors([]);
-    updateTournament(editingId, editForm);
-    setEditSaved(true);
-    setTimeout(() => { setEditSaved(false); closeEdit(); refresh(); }, 1200);
+    try {
+      await updateTournamentInDB(editingId, editForm);
+      setEditSaved(true);
+      setTimeout(() => { setEditSaved(false); closeEdit(); refresh(); }, 1200);
+    } catch (err) {
+      setEditErrors([err.message]);
+    }
   };
 
   return (
@@ -1629,11 +1650,11 @@ function TournamentListTab({ statusFilter, setTab }) {
 // =================== SCHEDULE TAB ===================
 const TIME_PRESETS = [
   { label: '12 PM', value: '12:00' },
-  { label: '2 PM',  value: '14:00' },
-  { label: '4 PM',  value: '16:00' },
-  { label: '6 PM',  value: '18:00' },
-  { label: '8 PM',  value: '20:00' },
-  { label: '9 PM',  value: '21:00' },
+  { label: '2 PM', value: '14:00' },
+  { label: '4 PM', value: '16:00' },
+  { label: '6 PM', value: '18:00' },
+  { label: '8 PM', value: '20:00' },
+  { label: '9 PM', value: '21:00' },
   { label: '10 PM', value: '22:00' },
   { label: '11 PM', value: '23:00' },
 ];
@@ -1647,7 +1668,7 @@ function formatTime12(t) {
 }
 
 function ScheduleTab() {
-  const [entries, setEntries] = useState(getScheduleEntries());
+  const [entries, setEntries] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [allTournaments, setAllTournaments] = useState([]);
   const [toast, setToast] = useState('');
@@ -1657,9 +1678,12 @@ function ScheduleTab() {
   const [addTime, setAddTime] = useState('20:00');
   const [addNotes, setAddNotes] = useState('');
 
-  const refresh = useCallback(() => {
-    setEntries(getScheduleEntries());
-    setAllTournaments(getAllTournaments().filter(t => t.status === 'upcoming' || t.status === 'live'));
+  const refresh = useCallback(async () => {
+    const data = await fetchScheduleEntries();
+    setEntries(data);
+    const upcoming = await fetchTournamentsByStatus('upcoming');
+    const live = await fetchTournamentsByStatus('live');
+    setAllTournaments([...upcoming, ...live]);
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -1675,16 +1699,16 @@ function ScheduleTab() {
     .map((w, origIdx) => ({ ...w, _idx: origIdx }))
     .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = async () => {
     if (!addTournamentId) { showToast('Select a tournament first'); return; }
     if (!addTime) { showToast('Pick a time slot'); return; }
-    const t = allTournaments.find(x => x.id === addTournamentId);
+    const t = allTournaments.find(x => String(x.id) === String(addTournamentId));
     if (!t) return;
     const widget = { tournamentId: t.id, name: t.name, time: addTime, notes: addNotes };
     if (dateEntry) {
-      updateScheduleEntry(dateEntry.id, { tournaments: [...dateTournaments, widget] });
+      await updateScheduleEntryInDB(dateEntry.id, { tournaments: [...dateTournaments, widget] });
     } else {
-      addScheduleEntry({ date: selectedDate, tournaments: [widget] });
+      await addScheduleEntryToDB({ date: selectedDate, tournaments: [widget] });
     }
     showToast(`Scheduled "${t.name}" at ${formatTime12(addTime)}`);
     setAddTournamentId('');
@@ -1692,28 +1716,28 @@ function ScheduleTab() {
     refresh();
   };
 
-  const handleUpdateWidget = (idx, key, val) => {
+  const handleUpdateWidget = async (idx, key, val) => {
     if (!dateEntry) return;
     const updated = dateTournaments.map((w, i) => i === idx ? { ...w, [key]: val } : w);
-    updateScheduleEntry(dateEntry.id, { tournaments: updated });
+    await updateScheduleEntryInDB(dateEntry.id, { tournaments: updated });
     refresh();
   };
 
-  const handleRemoveWidget = (idx) => {
+  const handleRemoveWidget = async (idx) => {
     if (!dateEntry) return;
     const updated = dateTournaments.filter((_, i) => i !== idx);
     if (updated.length === 0) {
-      deleteScheduleEntry(dateEntry.id);
+      await deleteScheduleEntryFromDB(dateEntry.id);
     } else {
-      updateScheduleEntry(dateEntry.id, { tournaments: updated });
+      await updateScheduleEntryInDB(dateEntry.id, { tournaments: updated });
     }
     showToast('Removed from schedule');
     refresh();
   };
 
-  const handleDeleteDay = () => {
+  const handleDeleteDay = async () => {
     if (!dateEntry) return;
-    deleteScheduleEntry(dateEntry.id);
+    await deleteScheduleEntryFromDB(dateEntry.id);
     showToast('Day schedule cleared');
     refresh();
   };
@@ -1753,11 +1777,10 @@ function ScheduleTab() {
               <button
                 key={d}
                 onClick={() => setSelectedDate(d)}
-                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  d === selectedDate
-                    ? 'bg-accent text-dark ring-2 ring-accent/40 shadow-lg shadow-accent/20'
-                    : 'bg-dark-card border border-dark-border text-grey hover:text-white hover:border-accent/30'
-                }`}
+                className={`relative px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${d === selectedDate
+                  ? 'bg-accent text-dark ring-2 ring-accent/40 shadow-lg shadow-accent/20'
+                  : 'bg-dark-card border border-dark-border text-grey hover:text-white hover:border-accent/30'
+                  }`}
               >
                 <span className="block text-[10px] uppercase tracking-wider opacity-70">
                   {isToday ? 'Today' : new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
@@ -1832,11 +1855,10 @@ function ScheduleTab() {
                   <button
                     key={tp.value}
                     onClick={() => setAddTime(tp.value)}
-                    className={`px-2 py-2 rounded-lg text-xs font-bold transition-all ${
-                      addTime === tp.value
-                        ? 'bg-accent text-dark ring-1 ring-accent/50 shadow-md shadow-accent/20'
-                        : 'bg-dark-card border border-dark-border text-grey hover:text-white hover:border-accent/30'
-                    }`}
+                    className={`px-2 py-2 rounded-lg text-xs font-bold transition-all ${addTime === tp.value
+                      ? 'bg-accent text-dark ring-1 ring-accent/50 shadow-md shadow-accent/20'
+                      : 'bg-dark-card border border-dark-border text-grey hover:text-white hover:border-accent/30'
+                      }`}
                   >
                     {tp.label}
                   </button>
@@ -1868,11 +1890,10 @@ function ScheduleTab() {
             <button
               onClick={handleQuickAdd}
               disabled={!addTournamentId || !addTime}
-              className={`w-full py-3 rounded-xl font-heading font-bold text-sm uppercase tracking-wider transition-all ${
-                addTournamentId && addTime
-                  ? 'bg-accent hover:bg-accent-dark text-dark shadow-lg shadow-accent/20 hover:shadow-accent/30'
-                  : 'bg-dark-card border border-dark-border text-grey/40 cursor-not-allowed'
-              }`}
+              className={`w-full py-3 rounded-xl font-heading font-bold text-sm uppercase tracking-wider transition-all ${addTournamentId && addTime
+                ? 'bg-accent hover:bg-accent-dark text-dark shadow-lg shadow-accent/20 hover:shadow-accent/30'
+                : 'bg-dark-card border border-dark-border text-grey/40 cursor-not-allowed'
+                }`}
             >
               + Add to Schedule
             </button>
@@ -2048,6 +2069,8 @@ const TABS = [
   { id: 'settings', label: 'Settings', group: 'legacy' },
 ];
 
+const ADMIN_PASSWORD = 'Hush$6969';
+
 export default function Admin() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState('');
@@ -2089,12 +2112,11 @@ export default function Admin() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const settings = getSettings();
-    if (password === settings.admin_password) {
+    setError('');
+    if (password === ADMIN_PASSWORD) {
       setAuthed(true);
-      setError('');
     } else {
-      setError('Invalid password');
+      setError('Incorrect password');
     }
   };
 
@@ -2103,9 +2125,7 @@ export default function Admin() {
       <div className="min-h-screen pt-24 pb-16 flex items-center justify-center px-4">
         <div className="w-full max-w-sm bg-dark-card border border-dark-border rounded-2xl p-8 animate-slide-up">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-xl bg-accent/20 flex items-center justify-center mx-auto mb-4">
-              <span className="text-accent font-heading font-bold text-2xl">GL</span>
-            </div>
+            <img src="/images/godlike-logo.png" alt="GodLike Esports" className="w-16 h-16 rounded-xl object-contain mx-auto mb-4" />
             <h1 className="font-heading font-bold text-2xl text-white">Admin Login</h1>
             <p className="text-grey text-sm mt-1">Enter password to continue</p>
           </div>
@@ -2115,8 +2135,8 @@ export default function Admin() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="Password"
+              required
               className="w-full bg-dark border border-dark-border rounded-lg px-4 py-3 text-white focus:border-accent focus:outline-none transition text-center text-lg"
-              autoFocus
             />
             {error && <p className="text-loss text-sm text-center">{error}</p>}
             <button
@@ -2159,6 +2179,10 @@ export default function Admin() {
               onClick={() => setShowActivityLog(!showActivityLog)}
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${showActivityLog ? 'bg-accent text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
             >Activity</button>
+            <button
+              onClick={() => setAuthed(false)}
+              className="px-3 py-2 rounded-lg text-sm font-semibold transition bg-loss/20 text-loss hover:bg-loss/30"
+            >Logout</button>
           </div>
         </div>
 
@@ -2188,9 +2212,8 @@ export default function Admin() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg font-heading font-semibold text-sm transition mb-0.5 ${
-                    tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
-                  }`}
+                  className={`w-full text-left px-3 py-2 rounded-lg font-heading font-semibold text-sm transition mb-0.5 ${tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   {t.label}
                 </button>
@@ -2201,9 +2224,8 @@ export default function Admin() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg font-heading font-semibold text-sm transition mb-0.5 ${
-                    tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
-                  }`}
+                  className={`w-full text-left px-3 py-2 rounded-lg font-heading font-semibold text-sm transition mb-0.5 ${tab === t.id ? 'bg-accent text-white' : 'text-grey hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   {t.label}
                 </button>

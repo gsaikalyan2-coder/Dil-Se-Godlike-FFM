@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTournamentStoreSync } from '../hooks/useTournamentStoreSync';
+import { useTournamentsByStatus } from '../hooks/useSupabaseTournaments';
 import { computeSquadPerformance, computeAutoStandings } from '../data/tournamentStore';
 import TierBadge from '../components/TierBadge';
 
@@ -211,7 +211,15 @@ function LiveTournamentCard({ tournament }) {
 
 /* ═══ Main Component ═══ */
 export default function LiveScores() {
-  const { tournaments: liveTournaments } = useTournamentStoreSync('live');
+  const { tournaments: liveTournaments, loading } = useTournamentsByStatus('live');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-24 pb-16 flex items-center justify-center" style={{ backgroundColor: '#0d0d0f' }}>
+        <p className="text-grey text-lg">Loading live scores...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-16" style={{ backgroundColor: '#0d0d0f' }}>

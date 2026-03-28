@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useTournamentStoreSync, useLiveTournament, useScheduleSync } from '../hooks/useTournamentStoreSync';
-import { getTournament, computeSquadPerformance, computeAutoStandings } from '../data/tournamentStore';
+import { useState, useMemo } from 'react';
+import { useTournamentsByStatus, useLiveTournament, useScheduleEntries } from '../hooks/useSupabaseTournaments';
+import { computeSquadPerformance, computeAutoStandings } from '../data/tournamentStore';
 import TournamentCountdown from '../components/TournamentCountdown';
 import TierBadge from '../components/TierBadge';
 
@@ -168,8 +168,8 @@ function TournamentDetailPanel({ tournament }) {
 }
 
 /* ═══ Schedule Widget Card (Bento Style) ═══ */
-function ScheduleWidget({ widget, isExpanded, onToggle }) {
-  const tournament = widget.tournamentId ? getTournament(widget.tournamentId) : null;
+function ScheduleWidget({ widget, isExpanded, onToggle, tournamentMap }) {
+  const tournament = widget.tournamentId ? (tournamentMap || {})[widget.tournamentId] : null;
   const tier = tournament?.tier;
   const gameMode = tournament?.gameMode;
   const organizer = tournament?.organizer;
@@ -289,13 +289,20 @@ function ScheduleTournamentCard({ t, index, expandedId, toggleExpand }) {
 
 export default function Schedule() {
   const liveTournament = useLiveTournament();
-  const { tournaments: upcomingTournaments } = useTournamentStoreSync('upcoming');
-  const { tournaments: completedTournaments } = useTournamentStoreSync('completed');
-  const { entries: scheduleEntries } = useScheduleSync();
+  const { tournaments: upcomingTournaments } = useTournamentsByStatus('upcoming');
+  const { tournaments: completedTournaments } = useTournamentsByStatus('completed');
+  const { entries: scheduleEntries } = useScheduleEntries();
 
   const [sortBy, setSortBy] = useState('date');
   const [filterMode, setFilterMode] = useState('all');
   const [filterTier, setFilterTier] = useState('all');
+
+  // Build a lookup map for all fetched tournaments
+  const tournamentMap = useMemo(() => {
+    const map = {};
+    [...upcomingTournaments, ...completedTournaments, ...(liveTournament ? [liveTournament] : [])].forEach(t => { map[t.id] = t; });
+    return map;
+  }, [upcomingTournaments, completedTournaments, liveTournament]);
 
   // Track which tournament is expanded (by id) — only one at a time
   const [expandedId, setExpandedId] = useState(null);
@@ -315,7 +322,7 @@ export default function Schedule() {
   });
 
   // Filter & Sort completed tournaments (excluding seeds for Agenda fallback)
-  let completedFiltered = completedTournaments.filter(t => !t.id.startsWith('seed_'));
+  let completedFiltered = completedTournaments.filter(t => !(typeof t.id === 'string' && t.id.startsWith('seed_')));
   if (filterMode !== 'all') completedFiltered = completedFiltered.filter(t => t.gameMode === filterMode);
   if (filterTier !== 'all') completedFiltered = completedFiltered.filter(t => t.tier === filterTier);
   completedFiltered = [...completedFiltered].sort((a, b) => {
@@ -338,7 +345,7 @@ export default function Schedule() {
       const validWidgets = [...entry.tournaments]
         .sort((a,b) => (a.time || '').localeCompare(b.time || ''))
         .filter(w => {
-           const rt = getTournament(w.tournamentId);
+           const rt = tournamentMap[w.tournamentId];
            return rt && rt.status !== 'completed' && rt.status !== 'live';
         });
       if (validWidgets.length > 0) {
@@ -349,7 +356,7 @@ export default function Schedule() {
     }
   }
 
-  const nextTournament = nextScheduledWidget ? getTournament(nextScheduledWidget.tournamentId) : null;
+  const nextTournament = nextScheduledWidget ? tournamentMap[nextScheduledWidget.tournamentId] : null;
   const heroTournament = liveTournament || nextTournament;
   const isHeroLive = !!liveTournament;
 
@@ -527,6 +534,7 @@ export default function Schedule() {
                           widget={w}
                           isExpanded={expandedId === w.tournamentId}
                           onToggle={() => w.tournamentId && toggleExpand(w.tournamentId)}
+                          tournamentMap={tournamentMap}
                         />
                       ))}
                     </div>

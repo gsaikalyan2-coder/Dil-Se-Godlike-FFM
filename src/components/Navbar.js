@@ -39,7 +39,7 @@ export default function Navbar() {
       {/* Logo - Absolute positioning to hover over content */}
       <Link to="/" className="absolute top-0 left-4 sm:left-8 z-[60] flex items-center h-16 sm:h-20 transition-transform duration-500 hover:scale-105 origin-left">
         <img 
-          src="/images/images (2).png" 
+          src="/images/NewGodLLogo.png"
           alt="GodLike FFM Logo" 
           className="w-[160px] sm:w-[220px] h-full object-contain object-left drop-shadow-2xl brightness-110 contrast-125"
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
