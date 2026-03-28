@@ -131,10 +131,12 @@ function TournamentDetailPanel({ tournament }) {
         </div>
       )}
 
-      {/* Standings */}
-      {tournament.standings && tournament.standings.length > 0 && (
-        <div className="mt-3">
-          <p className="text-[#e6c364] text-[9px] font-bold uppercase tracking-widest mb-2">Standings</p>
+      {/* Per-Stage Standings */}
+      {(tournament.stages || []).filter(s => s.standings && s.standings.length > 0).map((stage, si) => (
+        <div key={si} className="mt-3">
+          <p className="text-[#e6c364] text-[9px] font-bold uppercase tracking-widest mb-2">
+            {stage.name || `Stage ${si + 1}`} — Standings
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -146,7 +148,7 @@ function TournamentDetailPanel({ tournament }) {
                 </tr>
               </thead>
               <tbody>
-                {tournament.standings.map((r, i) => {
+                {stage.standings.map((r, i) => {
                   const isGL = r.isGodlike || (r.team && r.team.toLowerCase().includes('godl'));
                   return (
                     <tr key={i} className={`border-b border-white/5 ${i % 2 === 0 ? 'bg-[#0a0a0a]' : ''}`}
@@ -160,6 +162,49 @@ function TournamentDetailPanel({ tournament }) {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      ))}
+
+      {/* VOD Links */}
+      {tournament.vodLinks && tournament.vodLinks.length > 0 && (
+        <div className="mt-3">
+          <p className="text-[#e6c364] text-[9px] font-bold uppercase tracking-widest mb-2">Watch VODs</p>
+          <div className="flex flex-wrap gap-2">
+            {tournament.vodLinks.map((v, i) => (
+              <a
+                key={i}
+                href={v.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M10 15l5.19-3L10 9v6m11.56-7.83c.13.47.22 1.1.28 1.9.07.8.1 1.49.1 2.09L22 12c0 2.19-.16 3.8-.44 4.83-.25.9-.83 1.48-1.73 1.73-.47.13-1.33.22-2.65.28-1.3.07-2.49.1-3.59.1L12 19c-4.19 0-6.8-.16-7.83-.44-.9-.25-1.48-.83-1.73-1.73-.13-.47-.22-1.1-.28-1.9-.07-.8-.1-1.49-.1-2.09L2 12c0-2.19.16-3.8.44-4.83.25-.9.83-1.48 1.73-1.73.47-.13 1.33-.22 2.65-.28 1.3-.07 2.49-.1 3.59-.1L12 5c4.19 0 6.8.16 7.83.44.9.25 1.48.83 1.73 1.73z"/></svg>
+                {v.stage || 'Watch'}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tournament Links */}
+      {(tournament.liquipediaURL || tournament.instagramURL) && (
+        <div className="mt-3">
+          <p className="text-[#e6c364] text-[9px] font-bold uppercase tracking-widest mb-2">Links</p>
+          <div className="flex flex-wrap gap-2">
+            {tournament.liquipediaURL && (
+              <a href={tournament.liquipediaURL} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition">
+                Liquipedia
+              </a>
+            )}
+            {tournament.instagramURL && (
+              <a href={tournament.instagramURL} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 bg-pink-500/10 border border-pink-500/20 text-pink-400 hover:bg-pink-500/20 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition">
+                Instagram
+              </a>
+            )}
           </div>
         </div>
       )}

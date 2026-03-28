@@ -19,7 +19,6 @@ import {
   getSettings, saveSettings, getLiveMatch,
 } from '../data/store';
 import {
-  getAllTournaments, getTournamentsByStatus, getTournamentIndex,
   validateTournament,
   createBlankTournament,
   getActivityLog, clearActivityLog,
@@ -781,7 +780,10 @@ function LiveControlPanelTab() {
 
 // =================== ANALYTICS TAB ===================
 function AnalyticsTab() {
-  const completed = getTournamentsByStatus('completed');
+  const [completed, setCompleted] = useState([]);
+  useEffect(() => {
+    fetchTournamentsByStatus('completed').then(setCompleted);
+  }, []);
 
   // Stat calculations
   const totalTournaments = completed.length;
@@ -913,11 +915,23 @@ function AnalyticsTab() {
 
 // =================== OVERVIEW TAB ===================
 function OverviewTab({ setTab }) {
-  const index = getTournamentIndex();
-  const counts = { upcoming: 0, live: 0, completed: 0 };
-  index.forEach(e => { if (counts[e.status] !== undefined) counts[e.status]++; });
+  const [counts, setCounts] = useState({ upcoming: 0, live: 0, completed: 0 });
+  const [all, setAll] = useState([]);
 
-  const all = getAllTournaments().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 5);
+  useEffect(() => {
+    (async () => {
+      const [upcoming, live, completed] = await Promise.all([
+        fetchTournamentsByStatus('upcoming'),
+        fetchTournamentsByStatus('live'),
+        fetchTournamentsByStatus('completed'),
+      ]);
+      setCounts({ upcoming: upcoming.length, live: live.length, completed: completed.length });
+      const merged = [...upcoming, ...live, ...completed]
+        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
+        .slice(0, 5);
+      setAll(merged);
+    })();
+  }, []);
 
   return (
     <div>
@@ -982,6 +996,7 @@ function CreateTournamentTab({ onCreated }) {
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const f = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -993,22 +1008,26 @@ function CreateTournamentTab({ onCreated }) {
   }));
 
   const handleSubmit = async () => {
+    if (submitting) return;
     const validation = validateTournament(form);
     if (!validation.valid) {
       setErrors(validation.errors);
       return;
     }
     setErrors([]);
+    setSubmitting(true);
     try {
       await createTournamentInDB(form);
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
         setForm(blank);
+        setSubmitting(false);
         if (onCreated) onCreated();
       }, 1500);
     } catch (err) {
       setErrors([err.message]);
+      setSubmitting(false);
     }
   };
 
@@ -1065,8 +1084,8 @@ function CreateTournamentTab({ onCreated }) {
         ))}
       </div>
 
-      <button onClick={handleSubmit} className="w-full py-3 bg-accent hover:bg-accent-dark text-white rounded-lg font-heading font-bold text-lg transition">
-        {saved ? '✓ Created!' : 'Create Tournament'}
+      <button onClick={handleSubmit} disabled={submitting || saved} className={`w-full py-3 rounded-lg font-heading font-bold text-lg transition ${submitting || saved ? 'bg-accent/50 cursor-not-allowed' : 'bg-accent hover:bg-accent-dark'} text-white`}>
+        {saved ? '✓ Created!' : submitting ? 'Creating...' : 'Create Tournament'}
       </button>
     </div>
   );
@@ -1269,10 +1288,28 @@ function TournamentListTab({ statusFilter, setTab }) {
     ef('stages', stages);
   };
 
-  // ─── Standings helpers ───
-  const addStandingsRow = () => ef('standings', [...(editForm.standings || []), { rank: (editForm.standings || []).length + 1, team: '', booyahs: 0, kills: 0, placementPts: 0, points: 0, prizeINR: 0, prizeUSD: 0 }]);
-  const removeStandingsRow = (i) => ef('standings', (editForm.standings || []).filter((_, idx) => idx !== i));
-  const updateStandingsRow = (i, key, val) => ef('standings', (editForm.standings || []).map((r, idx) => idx === i ? { ...r, [key]: val } : r));
+  // ─── Per-stage Standings helpers ───
+  const addStageStandingsRow = (stageIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.standings = [...(stage.standings || []), { rank: (stage.standings || []).length + 1, team: '', booyahs: 0, kills: 0, placementPts: 0, points: 0, prizeINR: 0, prizeUSD: 0 }];
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const removeStageStandingsRow = (stageIdx, rowIdx) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.standings = (stage.standings || []).filter((_, i) => i !== rowIdx);
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
+  const updateStageStandingsRow = (stageIdx, rowIdx, key, val) => {
+    const stages = [...(editForm.stages || [])];
+    const stage = { ...stages[stageIdx] };
+    stage.standings = (stage.standings || []).map((r, i) => i === rowIdx ? { ...r, [key]: val } : r);
+    stages[stageIdx] = stage;
+    ef('stages', stages);
+  };
 
   // ─── Journey helpers ───
   const addJourneyStage = () => ef('godlikeJourney', [...(editForm.godlikeJourney || []), { stage: '', position: '', points: 0, outcome: 'advanced', notes: '' }]);
@@ -1513,46 +1550,46 @@ function TournamentListTab({ statusFilter, setTab }) {
                             })}
                           </div>
                         )}
+
+                        {/* Per-Stage Standings Table */}
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-grey text-[10px] uppercase tracking-wider">Stage Standings</span>
+                            <button onClick={() => addStageStandingsRow(si)} className="px-2 py-0.5 text-[10px] bg-accent/20 text-accent rounded transition">+ Add Row</button>
+                          </div>
+                          {(stage.standings || []).length > 0 && (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="text-grey border-b border-dark-border">
+                                    <th className="py-1 px-2 text-left">#</th>
+                                    <th className="py-1 px-2 text-left">Team</th>
+                                    <th className="py-1 px-2">BYH</th>
+                                    <th className="py-1 px-2">Kills</th>
+                                    <th className="py-1 px-2">Pos Pts</th>
+                                    <th className="py-1 px-2">Total</th>
+                                    <th className="py-1 px-2"></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(stage.standings || []).map((r, ri) => (
+                                    <tr key={ri} className="border-b border-dark-border/30">
+                                      <td className="py-1 px-2"><input type="number" value={r.rank || ''} onChange={e => updateStageStandingsRow(si, ri, 'rank', +e.target.value)} className="w-10 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                      <td className="py-1 px-2"><input value={r.team || ''} onChange={e => updateStageStandingsRow(si, ri, 'team', e.target.value)} className="w-full bg-transparent border-b border-dark-border text-white" /></td>
+                                      <td className="py-1 px-2"><input type="number" value={r.booyahs || 0} onChange={e => updateStageStandingsRow(si, ri, 'booyahs', +e.target.value)} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                      <td className="py-1 px-2"><input type="number" value={r.kills || 0} onChange={e => updateStageStandingsRow(si, ri, 'kills', Math.max(0, +e.target.value))} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                      <td className="py-1 px-2"><input type="number" value={r.placementPts || 0} onChange={e => updateStageStandingsRow(si, ri, 'placementPts', +e.target.value)} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
+                                      <td className="py-1 px-2"><input type="number" value={r.points || 0} onChange={e => updateStageStandingsRow(si, ri, 'points', +e.target.value)} className="w-14 bg-transparent border-b border-dark-border text-accent text-center font-bold" /></td>
+                                      <td className="py-1 px-2"><button onClick={() => removeStageStandingsRow(si, ri)} className="text-loss text-[10px]">X</button></td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
-                  </div>
-
-                  {/* Standings */}
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-grey text-xs uppercase tracking-wider font-semibold">Standings</p>
-                      <button onClick={addStandingsRow} className="px-3 py-1 text-xs bg-accent/20 text-accent hover:bg-accent/30 rounded transition">+ Add Row</button>
-                    </div>
-                    {(editForm.standings || []).length > 0 && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-grey border-b border-dark-border">
-                              <th className="py-1 px-2 text-left">#</th>
-                              <th className="py-1 px-2 text-left">Team</th>
-                              <th className="py-1 px-2">BYH</th>
-                              <th className="py-1 px-2">Kills</th>
-                              <th className="py-1 px-2">Pos Pts</th>
-                              <th className="py-1 px-2">Total</th>
-                              <th className="py-1 px-2"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(editForm.standings || []).map((r, i) => (
-                              <tr key={i} className="border-b border-dark-border/30">
-                                <td className="py-1 px-2"><input type="number" value={r.rank || ''} onChange={e => updateStandingsRow(i, 'rank', +e.target.value)} className="w-10 bg-transparent border-b border-dark-border text-white text-center" /></td>
-                                <td className="py-1 px-2"><input value={r.team || ''} onChange={e => updateStandingsRow(i, 'team', e.target.value)} className="w-full bg-transparent border-b border-dark-border text-white" /></td>
-                                <td className="py-1 px-2"><input type="number" value={r.booyahs || 0} onChange={e => updateStandingsRow(i, 'booyahs', +e.target.value)} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
-                                <td className="py-1 px-2"><input type="number" value={r.kills || 0} onChange={e => updateStandingsRow(i, 'kills', Math.max(0, +e.target.value))} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
-                                <td className="py-1 px-2"><input type="number" value={r.placementPts || 0} onChange={e => updateStandingsRow(i, 'placementPts', +e.target.value)} className="w-12 bg-transparent border-b border-dark-border text-white text-center" /></td>
-                                <td className="py-1 px-2"><input type="number" value={r.points || 0} onChange={e => updateStandingsRow(i, 'points', +e.target.value)} className="w-14 bg-transparent border-b border-dark-border text-accent text-center font-bold" /></td>
-                                <td className="py-1 px-2"><button onClick={() => removeStandingsRow(i)} className="text-loss text-[10px]">X</button></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
                   </div>
 
                   {/* GodLike Journey */}

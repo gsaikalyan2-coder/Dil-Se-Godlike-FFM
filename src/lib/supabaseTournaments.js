@@ -11,6 +11,26 @@ import { supabase } from './supabase';
 // --- Column mapping helpers ---
 
 export function rowToTournament(row, stages = [], standings = [], journey = [], vodLinks = []) {
+  // Group standings by stage_id so each stage gets its own standings
+  const stageStandingsMap = {};
+  const orphanStandings = [];
+  for (const s of standings) {
+    if (s.stage_id) {
+      if (!stageStandingsMap[s.stage_id]) stageStandingsMap[s.stage_id] = [];
+      stageStandingsMap[s.stage_id].push(standingRowToStanding(s));
+    } else {
+      orphanStandings.push(standingRowToStanding(s));
+    }
+  }
+
+  const mappedStages = stages.map(s => ({
+    ...stageRowToStage(s),
+    standings: stageStandingsMap[s.id] || [],
+  }));
+
+  // Flat aggregate of all standings for backward-compat display
+  const allStandings = mappedStages.flatMap(s => s.standings).concat(orphanStandings);
+
   return {
     id: row.id,
     name: row.name,
@@ -32,8 +52,8 @@ export function rowToTournament(row, stages = [], standings = [], journey = [], 
     displayOrder: row.display_order || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    stages: stages.map(stageRowToStage),
-    standings: standings.map(standingRowToStanding),
+    stages: mappedStages,
+    standings: allStandings,
     godlikeJourney: journey.map(journeyRowToJourney),
     vodLinks: vodLinks.map(v => ({ stage: v.stage_name, url: v.url })),
     roster: row.roster || ['YOGI', 'MARCO', 'NOBITA', 'ECOECO', 'NANCY'],
@@ -177,9 +197,10 @@ export function standingRowToStanding(row) {
   };
 }
 
-export function standingToRow(s, tournamentId) {
+export function standingToRow(s, tournamentId, stageId) {
   return {
     tournament_id: tournamentId,
+    stage_id: stageId || null,
     rank: s.rank || 0,
     team_name: s.team || '',
     booyahs: s.booyahs || 0,
@@ -315,10 +336,12 @@ export async function createTournamentInDB(tournament) {
         .insert(stage.csMatches.map(m => matchToCsRow(m, sId)));
       if (cErr) throw new Error('Insert CS matches failed: ' + cErr.message);
     }
-  }
-
-  if (tournament.standings?.length) {
-    await supabase.from('standings').insert(tournament.standings.map(s => standingToRow(s, tId)));
+    if (stage.standings?.length) {
+      const { error: stErr } = await supabase
+        .from('standings')
+        .insert(stage.standings.map(s => standingToRow(s, tId, sId)));
+      if (stErr) throw new Error('Insert stage standings failed: ' + stErr.message);
+    }
   }
   if (tournament.godlikeJourney?.length) {
     await supabase.from('godlike_journey').insert(
@@ -342,6 +365,8 @@ export async function updateTournamentInDB(id, updates) {
   if (tErr) throw new Error('Update tournament failed: ' + tErr.message);
 
   if (updates.stages !== undefined) {
+    // Delete old standings (now per-stage) and stages together
+    await supabase.from('standings').delete().eq('tournament_id', id);
     await supabase.from('tournament_stages').delete().eq('tournament_id', id);
     for (const [si, stage] of (updates.stages || []).entries()) {
       const { data: sRow, error: sErr } = await supabase
@@ -357,13 +382,9 @@ export async function updateTournamentInDB(id, updates) {
       if (stage.type === 'cs_bracket' && stage.csMatches?.length) {
         await supabase.from('cs_matches').insert(stage.csMatches.map(m => matchToCsRow(m, sId)));
       }
-    }
-  }
-
-  if (updates.standings !== undefined) {
-    await supabase.from('standings').delete().eq('tournament_id', id);
-    if (updates.standings.length) {
-      await supabase.from('standings').insert(updates.standings.map(s => standingToRow(s, id)));
+      if (stage.standings?.length) {
+        await supabase.from('standings').insert(stage.standings.map(s => standingToRow(s, id, sId)));
+      }
     }
   }
 

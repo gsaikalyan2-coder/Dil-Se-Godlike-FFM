@@ -123,10 +123,12 @@ function LiveTournamentCard({ tournament }) {
           </div>
         )}
 
-        {/* Standings Table (if other teams' standings exist) */}
-        {tournament.standings && tournament.standings.length > 0 && (
-          <div className="mb-5">
-            <h5 className="text-xs text-[#c9a84c] font-bold uppercase tracking-wider mb-2">Standings</h5>
+        {/* Per-Stage Standings Tables */}
+        {(tournament.stages || []).filter(s => s.standings && s.standings.length > 0).map((stage, si) => (
+          <div key={si} className="mb-5">
+            <h5 className="text-xs text-[#c9a84c] font-bold uppercase tracking-wider mb-2">
+              {stage.name || `Stage ${si + 1}`} — Standings
+            </h5>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -138,7 +140,7 @@ function LiveTournamentCard({ tournament }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {tournament.standings.map((r, i) => {
+                  {stage.standings.map((r, i) => {
                     const isGL = r.isGodlike || (r.team && r.team.toLowerCase().includes('godl'));
                     return (
                       <tr key={i} className={`border-b border-dark-border/50 ${i % 2 === 0 ? 'bg-[#0d0d0f]' : 'bg-[#111113]'}`}
@@ -154,7 +156,7 @@ function LiveTournamentCard({ tournament }) {
               </table>
             </div>
           </div>
-        )}
+        ))}
 
         {/* Match History Toggle */}
         {allMatches.length > 0 && (
